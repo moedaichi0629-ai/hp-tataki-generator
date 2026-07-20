@@ -36,7 +36,27 @@ type SheetSaveState =
   | { status: "done" }
   | { status: "error"; message: string };
 
-const REGION_SUGGESTIONS = ["広島市", "福岡市", "大阪市", "名古屋市", "札幌市", "仙台市"];
+const REGION_SUGGESTIONS = [
+  "広島市",
+  "福岡市",
+  "大阪市",
+  "名古屋市",
+  "札幌市",
+  "仙台市",
+  "渋谷駅周辺",
+  "新宿駅周辺",
+  "梅田駅周辺",
+  "博多駅周辺",
+  "栄駅周辺",
+];
+
+const RADIUS_OPTIONS = [
+  { label: "500m", value: 500 },
+  { label: "1km", value: 1000 },
+  { label: "2km", value: 2000 },
+  { label: "3km", value: 3000 },
+];
+const DEFAULT_RADIUS = 1000;
 
 const INDUSTRY_SUGGESTIONS = [
   "美容室",
@@ -54,6 +74,7 @@ const INDUSTRY_SUGGESTIONS = [
 export default function Home() {
   const [region, setRegion] = useState("");
   const [industry, setIndustry] = useState("");
+  const [radiusMeters, setRadiusMeters] = useState(DEFAULT_RADIUS);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -70,7 +91,7 @@ export default function Home() {
     setGenerationHistory(getGenerationHistory());
   }, []);
 
-  const runSearch = async (searchRegion: string, searchIndustry: string) => {
+  const runSearch = async (searchRegion: string, searchIndustry: string, searchRadiusMeters: number) => {
     setSearching(true);
     setSearchError(null);
     setShops([]);
@@ -82,7 +103,7 @@ export default function Home() {
       const res = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ region: searchRegion, industry: searchIndustry }),
+        body: JSON.stringify({ region: searchRegion, industry: searchIndustry, radiusMeters: searchRadiusMeters }),
       });
       const data = await res.json();
 
@@ -105,13 +126,13 @@ export default function Home() {
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
-    runSearch(region, industry);
+    runSearch(region, industry, radiusMeters);
   };
 
   const handleHistorySearch = (entry: SearchHistoryEntry) => {
     setRegion(entry.region);
     setIndustry(entry.industry);
-    runSearch(entry.region, entry.industry);
+    runSearch(entry.region, entry.industry, radiusMeters);
   };
 
   const handleDeleteSearchHistory = (id: string) => {
@@ -264,7 +285,7 @@ export default function Home() {
               list="region-suggestions"
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              placeholder="例: 広島市"
+              placeholder="例: 広島市 / 渋谷駅周辺"
               required
             />
           </label>
@@ -278,10 +299,27 @@ export default function Home() {
               required
             />
           </label>
+          <label className={styles.field}>
+            <span>検索範囲（駅名・住所指定時）</span>
+            <select
+              value={radiusMeters}
+              onChange={(e) => setRadiusMeters(Number(e.target.value))}
+            >
+              {RADIUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button type="submit" disabled={searching}>
             {searching ? "検索中..." : "検索する"}
           </button>
         </form>
+        <p className={styles.fieldHint}>
+          「渋谷駅周辺」のように駅名や住所を入力すると、その地点を中心に検索範囲（上記セレクト）を絞り込んで検索します。
+          「広島市」のような市区町村名の場合は、これまで通りエリア全体を検索します。
+        </p>
 
         <datalist id="region-suggestions">
           {REGION_SUGGESTIONS.map((item) => (

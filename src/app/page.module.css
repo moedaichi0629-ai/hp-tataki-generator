@@ -43,12 +43,20 @@
   font-weight: 600;
 }
 
-.field input {
+.field input,
+.field select {
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border-color, #ccc);
   font-size: 14px;
   min-width: 200px;
+}
+
+.fieldHint {
+  margin-top: -8px;
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+  line-height: 1.6;
 }
 
 .searchForm button {
