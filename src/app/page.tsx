@@ -37,6 +37,11 @@ type SheetSaveState =
   | { status: "error"; message: string };
 
 const REGION_SUGGESTIONS = [
+  "広島県",
+  "福岡県",
+  "大阪府",
+  "愛知県",
+  "北海道",
   "広島市",
   "福岡市",
   "大阪市",
@@ -275,29 +280,27 @@ export default function Home() {
       <main className={styles.main}>
         <h1>HPたたき台ジェネレーター</h1>
         <p className={styles.lead}>
-          地域と業種を指定して、Googleマップ上で公式ホームページが未設定の可能性がある店舗を検索します（最大10件）。
-          店舗ごとにボタンを押すと、AIが1ページホームページ風のプレビューを生成します。
+          地域と業種を指定して、Googleマップ上で公式ホームページが未設定の可能性がある店舗を検索します。
+          地域・業種はどちらか一方だけの入力でも検索できます。店舗ごとにボタンを押すと、AIが1ページホームページ風のプレビューを生成します。
         </p>
 
         <form className={styles.searchForm} onSubmit={handleSearch}>
           <label className={styles.field}>
-            <span>地域</span>
+            <span>地域（任意）</span>
             <input
               list="region-suggestions"
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              placeholder="例: 広島市 / 渋谷駅周辺"
-              required
+              placeholder="例: 広島県 / 広島市 / 渋谷駅周辺"
             />
           </label>
           <label className={styles.field}>
-            <span>業種</span>
+            <span>業種（任意）</span>
             <input
               list="industry-suggestions"
               value={industry}
               onChange={(e) => setIndustry(e.target.value)}
               placeholder="例: 美容室"
-              required
             />
           </label>
           <label className={styles.field}>
@@ -318,8 +321,10 @@ export default function Home() {
           </button>
         </form>
         <p className={styles.fieldHint}>
+          地域・業種は最低どちらか一方の入力が必要です。業種を空欄にすると、その地域の業種を問わずすべての店舗を検索します。
+          地域を空欄にすると、その業種を全国から検索します。
           「渋谷駅周辺」のように駅名や住所を入力し、検索範囲で500m〜3kmを選ぶと、その地点を中心に絞り込んで検索します。
-          検索範囲を「指定しない」のままにするか、「広島市」のような市区町村名を入力した場合は、これまで通りエリア全体を検索します。
+          検索範囲を「指定しない」のままにするか、「広島県」「広島市」のような広い地域名を入力した場合は、これまで通りエリア全体を検索します。
         </p>
 
         <datalist id="region-suggestions">
@@ -337,7 +342,7 @@ export default function Home() {
 
         {!searching && hasSearched && !searchError && (
           <p className={styles.resultCount}>
-            Googleマップ上で公式ホームページが未設定の可能性がある店舗が {shops.length} 件見つかりました（最大10件表示）。
+            Googleマップ上で公式ホームページが未設定の可能性がある店舗が {shops.length} 件見つかりました。
           </p>
         )}
 

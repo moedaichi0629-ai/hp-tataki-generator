@@ -3,9 +3,10 @@ import { geocodeRegion, getPlaceDetails, searchPlaceIds, searchPlaceIdsNearby } 
 import { isOfficialWebsite } from "@/lib/officialWebsite";
 import { describeFetchError } from "@/lib/errorUtils";
 
-const MAX_RESULTS = 10;
 const MIN_RADIUS_METERS = 100;
 const MAX_RADIUS_METERS = 5000;
+// 業種が未指定の場合に使う汎用キーワード（業種を問わず店舗全般を対象にする）
+const ANY_INDUSTRY_KEYWORD = "店舗";
 
 export async function POST(request: Request) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -24,24 +25,34 @@ export async function POST(request: Request) {
   const useRadius = rawRadius > 0;
   const radiusMeters = Math.min(Math.max(rawRadius, MIN_RADIUS_METERS), MAX_RADIUS_METERS);
 
-  if (!region || !industry) {
-    return NextResponse.json({ error: "地域と業種を入力してください。" }, { status: 400 });
+  if (!region && !industry) {
+    return NextResponse.json({ error: "地域か業種のどちらかを入力してください。" }, { status: 400 });
   }
 
   try {
-    // 「〇〇駅」「住所」のようにピンポイントな地点を指す場合、検索範囲が指定されていればその地点を中心とした半径検索に切り替える
-    // Geocoding APIが未有効化などで失敗しても、従来通りのテキスト検索にフォールバックする
-    const geocoded = useRadius
-      ? await geocodeRegion(region, apiKey).catch((error) => {
-          console.error("geocodeRegion failed, falling back to text search:", error);
-          return null;
-        })
-      : null;
+    let placeIds: string[];
 
-    const placeIds =
-      geocoded && geocoded.isPinpoint
-        ? await searchPlaceIdsNearby(geocoded, radiusMeters, industry, apiKey)
-        : await searchPlaceIds(`${industry} ${region}`, apiKey);
+    if (region) {
+      // 業種が未指定の場合は汎用キーワードで「業種を問わずすべて」検索する
+      const effectiveIndustry = industry || ANY_INDUSTRY_KEYWORD;
+
+      // 「〇〇駅」「住所」のようにピンポイントな地点を指す場合、検索範囲が指定されていればその地点を中心とした半径検索に切り替える
+      // Geocoding APIが未有効化などで失敗しても、従来通りのテキスト検索にフォールバックする
+      const geocoded = useRadius
+        ? await geocodeRegion(region, apiKey).catch((error) => {
+            console.error("geocodeRegion failed, falling back to text search:", error);
+            return null;
+          })
+        : null;
+
+      placeIds =
+        geocoded && geocoded.isPinpoint
+          ? await searchPlaceIdsNearby(geocoded, radiusMeters, effectiveIndustry, apiKey)
+          : await searchPlaceIds(`${effectiveIndustry} ${region}`, apiKey);
+    } else {
+      // 地域が未指定：業種のみで全国から検索する
+      placeIds = await searchPlaceIds(industry, apiKey);
+    }
 
     const details = await Promise.all(placeIds.map((id) => getPlaceDetails(id, apiKey)));
 
@@ -49,7 +60,7 @@ export async function POST(request: Request) {
       (shop): shop is NonNullable<typeof shop> => shop !== null && !isOfficialWebsite(shop.website)
     );
 
-    return NextResponse.json({ shops: shopsWithoutWebsite.slice(0, MAX_RESULTS) });
+    return NextResponse.json({ shops: shopsWithoutWebsite });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: describeFetchError(error, "検索") }, { status: 500 });
