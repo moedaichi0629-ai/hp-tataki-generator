@@ -51,12 +51,13 @@ const REGION_SUGGESTIONS = [
 ];
 
 const RADIUS_OPTIONS = [
+  { label: "指定しない（エリア全体を検索）", value: 0 },
   { label: "500m", value: 500 },
   { label: "1km", value: 1000 },
   { label: "2km", value: 2000 },
   { label: "3km", value: 3000 },
 ];
-const DEFAULT_RADIUS = 1000;
+const DEFAULT_RADIUS = 0;
 
 const INDUSTRY_SUGGESTIONS = [
   "美容室",
@@ -300,7 +301,7 @@ export default function Home() {
             />
           </label>
           <label className={styles.field}>
-            <span>検索範囲（駅名・住所指定時）</span>
+            <span>検索範囲（任意）</span>
             <select
               value={radiusMeters}
               onChange={(e) => setRadiusMeters(Number(e.target.value))}
@@ -317,8 +318,8 @@ export default function Home() {
           </button>
         </form>
         <p className={styles.fieldHint}>
-          「渋谷駅周辺」のように駅名や住所を入力すると、その地点を中心に検索範囲（上記セレクト）を絞り込んで検索します。
-          「広島市」のような市区町村名の場合は、これまで通りエリア全体を検索します。
+          「渋谷駅周辺」のように駅名や住所を入力し、検索範囲で500m〜3kmを選ぶと、その地点を中心に絞り込んで検索します。
+          検索範囲を「指定しない」のままにするか、「広島市」のような市区町村名を入力した場合は、これまで通りエリア全体を検索します。
         </p>
 
         <datalist id="region-suggestions">

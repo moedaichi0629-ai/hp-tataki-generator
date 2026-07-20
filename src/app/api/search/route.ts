@@ -4,7 +4,6 @@ import { isOfficialWebsite } from "@/lib/officialWebsite";
 import { describeFetchError } from "@/lib/errorUtils";
 
 const MAX_RESULTS = 10;
-const DEFAULT_RADIUS_METERS = 1000;
 const MIN_RADIUS_METERS = 100;
 const MAX_RADIUS_METERS = 5000;
 
@@ -20,7 +19,9 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const region = typeof body?.region === "string" ? body.region.trim() : "";
   const industry = typeof body?.industry === "string" ? body.industry.trim() : "";
-  const rawRadius = typeof body?.radiusMeters === "number" ? body.radiusMeters : DEFAULT_RADIUS_METERS;
+  // radiusMetersが未指定・0以下の場合は「検索範囲を指定しない」＝常にエリア全体検索とする
+  const rawRadius = typeof body?.radiusMeters === "number" ? body.radiusMeters : 0;
+  const useRadius = rawRadius > 0;
   const radiusMeters = Math.min(Math.max(rawRadius, MIN_RADIUS_METERS), MAX_RADIUS_METERS);
 
   if (!region || !industry) {
@@ -28,12 +29,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    // 「〇〇駅」「住所」のようにピンポイントな地点を指す場合は、その地点を中心とした半径検索に切り替える
+    // 「〇〇駅」「住所」のようにピンポイントな地点を指す場合、検索範囲が指定されていればその地点を中心とした半径検索に切り替える
     // Geocoding APIが未有効化などで失敗しても、従来通りのテキスト検索にフォールバックする
-    const geocoded = await geocodeRegion(region, apiKey).catch((error) => {
-      console.error("geocodeRegion failed, falling back to text search:", error);
-      return null;
-    });
+    const geocoded = useRadius
+      ? await geocodeRegion(region, apiKey).catch((error) => {
+          console.error("geocodeRegion failed, falling back to text search:", error);
+          return null;
+        })
+      : null;
 
     const placeIds =
       geocoded && geocoded.isPinpoint
