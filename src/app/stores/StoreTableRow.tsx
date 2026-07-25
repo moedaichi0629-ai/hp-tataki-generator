@@ -138,7 +138,7 @@ export default function StoreTableRow({
       <ConfirmDialog
         open={confirmOpen}
         title="店舗を削除しますか？"
-        message={`「${store.name}」を削除します。この操作は取り消せません。`}
+        message={`「${store.name}」を削除します。アップロード済みの画像も含めて削除され、この操作は取り消せません。`}
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
       />

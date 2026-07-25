@@ -3,6 +3,7 @@ import type { PlaceSearchResult } from "@/types/store";
 const PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
 const GEOCODE_API_BASE = "https://maps.googleapis.com/maps/api/geocode/json";
 const REQUEST_TIMEOUT_MS = 10000;
+const MAX_PHOTOS = 10;
 
 // 駅名・住所など「ピンポイントな場所」を表す型（このいずれかを含む場合は半径検索に切り替える）
 const PINPOINT_TYPES = [
@@ -120,6 +121,13 @@ interface PlaceDetailsReview {
   time?: number; // unix seconds
 }
 
+interface PlaceDetailsPhoto {
+  photo_reference?: string;
+  width?: number;
+  height?: number;
+  html_attributions?: string[];
+}
+
 interface PlaceDetailsResponse {
   result?: {
     place_id?: string;
@@ -136,6 +144,7 @@ interface PlaceDetailsResponse {
     price_level?: number;
     types?: string[];
     reviews?: PlaceDetailsReview[];
+    photos?: PlaceDetailsPhoto[];
   };
   status: string;
   error_message?: string;
@@ -158,6 +167,7 @@ const DETAILS_FIELDS = [
 ].join(",");
 
 const DETAILS_FIELDS_WITH_REVIEWS = `${DETAILS_FIELDS},reviews`;
+const DETAILS_FIELDS_WITH_PHOTOS = "place_id,photos";
 
 function toPlaceSearchResult(placeId: string, result: NonNullable<PlaceDetailsResponse["result"]>): PlaceSearchResult {
   return {
@@ -224,4 +234,65 @@ export async function getPlaceDetailsWithReviews(
   }));
 
   return { place: toPlaceSearchResult(placeId, data.result), reviews };
+}
+
+export interface PlacePhotoRaw {
+  photoReference: string;
+  width: number | null;
+  height: number | null;
+  authorName: string | null;
+  authorUri: string | null;
+}
+
+// html_attributionsは `<a href="...">投稿者名</a>` 形式のHTML文字列で返るため、簡易的にパースする
+function parseHtmlAttribution(html: string | undefined): { authorName: string | null; authorUri: string | null } {
+  if (!html) return { authorName: null, authorUri: null };
+  const match = html.match(/<a\s+href="([^"]*)"[^>]*>([^<]*)<\/a>/i);
+  if (!match) return { authorName: html.replace(/<[^>]*>/g, "").trim() || null, authorUri: null };
+  return { authorName: match[2]?.trim() || null, authorUri: match[1] || null };
+}
+
+// Place Details の photos フィールドのみを取得する（実体画像はダウンロードしない。参照情報のみ）
+export async function getPlacePhotos(placeId: string, apiKey: string): Promise<PlacePhotoRaw[] | null> {
+  const url = new URL(`${PLACES_API_BASE}/details/json`);
+  url.searchParams.set("place_id", placeId);
+  url.searchParams.set("fields", DETAILS_FIELDS_WITH_PHOTOS);
+  url.searchParams.set("language", "ja");
+  url.searchParams.set("key", apiKey);
+
+  const res = await fetchWithTimeout(url.toString());
+  const data = (await res.json()) as PlaceDetailsResponse;
+
+  if (data.status !== "OK" || !data.result) return null;
+
+  return (data.result.photos ?? [])
+    .filter((p): p is PlaceDetailsPhoto & { photo_reference: string } => Boolean(p.photo_reference))
+    .slice(0, MAX_PHOTOS)
+    .map((p) => {
+      const { authorName, authorUri } = parseHtmlAttribution(p.html_attributions?.[0]);
+      return {
+        photoReference: p.photo_reference,
+        width: p.width ?? null,
+        height: p.height ?? null,
+        authorName,
+        authorUri,
+      };
+    });
+}
+
+const PHOTO_API_BASE = "https://maps.googleapis.com/maps/api/place/photo";
+const MAX_PHOTO_WIDTH = 1600;
+
+// Googleマップ写真の実バイトを取得する（サーバー側プロキシ用。APIキーはここでのみ使用しクライアントへは渡さない）
+export async function fetchPlacePhotoBytes(
+  photoReference: string,
+  maxWidth: number,
+  apiKey: string
+): Promise<Response> {
+  const url = new URL(PHOTO_API_BASE);
+  url.searchParams.set("photo_reference", photoReference);
+  url.searchParams.set("maxwidth", String(Math.min(Math.max(maxWidth, 100), MAX_PHOTO_WIDTH)));
+  url.searchParams.set("key", apiKey);
+
+  return fetchWithTimeout(url.toString());
 }

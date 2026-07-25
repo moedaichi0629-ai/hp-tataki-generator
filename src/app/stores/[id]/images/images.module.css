@@ -1,0 +1,169 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+
+.thumbWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--surface-muted);
+  cursor: pointer;
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.selectCheckbox {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 18px;
+  height: 18px;
+  z-index: 2;
+}
+
+.cardBody {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.cardMeta {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.attribution {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.attribution a {
+  color: var(--accent);
+}
+
+.dropzone {
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.dropzoneActive {
+  composes: dropzone;
+  border-color: var(--accent);
+  background: var(--surface-muted);
+}
+
+.progressBarOuter {
+  width: 100%;
+  height: 6px;
+  background: var(--surface-muted);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressBarInner {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.previewOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 200;
+}
+
+.previewDialog {
+  background: var(--surface);
+  border-radius: 12px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.previewImageWrapper {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 45vh;
+  overflow: hidden;
+}
+
+.previewImage {
+  max-width: 100%;
+  max-height: 45vh;
+  object-fit: contain;
+}
+
+.previewForm {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.warningList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.warningItem {
+  font-size: 13px;
+  color: var(--warning);
+  background: rgba(185, 137, 0, 0.1);
+  border: 1px solid var(--warning);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.usageTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+
+@media (min-width: 640px) {
+  .previewDialog {
+    grid-template-columns: 1.2fr 1fr;
+  }
+
+  .previewImageWrapper {
+    max-height: 80vh;
+  }
+
+  .previewImage {
+    max-height: 80vh;
+  }
+}

@@ -12,14 +12,16 @@ import BasicInfoTab from "./BasicInfoTab";
 import ServicesTab from "./ServicesTab";
 import ReviewsStrengthsTab from "./ReviewsStrengthsTab";
 import ManagementNotesTab from "./ManagementNotesTab";
+import ImagesTab from "./images/ImagesTab";
 import type { Store, StoreStatus } from "@/types/store";
 
-type TabKey = "basic" | "services" | "reviews" | "management";
+type TabKey = "basic" | "services" | "reviews" | "images" | "management";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "basic", label: "基本情報" },
   { key: "services", label: "サービス・メニュー" },
   { key: "reviews", label: "口コミ・強み" },
+  { key: "images", label: "画像管理" },
   { key: "management", label: "メモ・管理情報" },
 ];
 
@@ -141,12 +143,13 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
       {tab === "basic" && <BasicInfoTab store={store} />}
       {tab === "services" && <ServicesTab storeId={store.id} />}
       {tab === "reviews" && <ReviewsStrengthsTab storeId={store.id} />}
+      {tab === "images" && <ImagesTab storeId={store.id} />}
       {tab === "management" && <ManagementNotesTab store={store} onStoreChanged={setStore} />}
 
       <ConfirmDialog
         open={deleteOpen}
         title="店舗を削除しますか？"
-        message={`「${store.name}」を削除します。この操作は取り消せません。`}
+        message={`「${store.name}」を削除します。アップロード済みの画像も含めて削除され、この操作は取り消せません。`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteOpen(false)}
       />

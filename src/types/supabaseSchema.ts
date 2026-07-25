@@ -167,3 +167,99 @@ export interface SearchHistoryRow {
 export type SearchHistoryInsertRow = Partial<Omit<SearchHistoryRow, "id" | "created_at">> & {
   search_type: string;
 };
+
+// ---------------------------------------------------------------------------
+// 第2段階: 画像管理
+// ---------------------------------------------------------------------------
+
+export type ImageSourceTypeRow =
+  | "google_maps"
+  | "store_provided"
+  | "user_upload"
+  | "external_url"
+  | "sns_reference"
+  | "free_material"
+  | "ai_generated"
+  | "other";
+
+export type StoreImageCategoryRow =
+  | "main_candidate"
+  | "exterior"
+  | "interior"
+  | "staff"
+  | "product"
+  | "service"
+  | "menu"
+  | "facility"
+  | "access"
+  | "logo"
+  | "other";
+
+export type ImagePermissionStatusRow =
+  | "unconfirmed"
+  | "sales_proposal_only"
+  | "store_permitted"
+  | "store_provided"
+  | "self_prepared"
+  | "free_material"
+  | "ai_generated"
+  | "public_ready"
+  | "not_allowed";
+
+export interface StoreImageRow {
+  id: string;
+  store_id: string;
+  name: string | null;
+  image_type: StoreImageCategoryRow;
+  source_type: ImageSourceTypeRow;
+  google_photo_resource_name: string | null;
+  storage_url: string | null;
+  external_url: string | null;
+  sns_post_url: string | null;
+  author_name: string | null;
+  google_maps_uri: string | null;
+  width: number | null;
+  height: number | null;
+  file_size: number | null;
+  mime_type: string | null;
+  is_selected: boolean;
+  usage_types: string[];
+  permission_status: ImagePermissionStatusRow;
+  display_order: number;
+  memo: string | null;
+  fetched_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type StoreImageInsertRow = Partial<Omit<StoreImageRow, "id" | "created_at" | "updated_at">> & {
+  store_id: string;
+  source_type: ImageSourceTypeRow;
+};
+
+export type StoreImageUpdateRow = Partial<Omit<StoreImageRow, "id" | "store_id" | "created_at" | "updated_at">>;
+
+export interface SocialImageReferenceRow {
+  id: string;
+  store_id: string;
+  sns_type: string;
+  post_url: string;
+  description: string | null;
+  planned_use: boolean;
+  confirmation_status: string;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SocialImageReferenceInsertRow = Partial<
+  Omit<SocialImageReferenceRow, "id" | "created_at" | "updated_at">
+> & {
+  store_id: string;
+  sns_type: string;
+  post_url: string;
+};
+
+export type SocialImageReferenceUpdateRow = Partial<
+  Omit<SocialImageReferenceRow, "id" | "store_id" | "created_at" | "updated_at">
+>;

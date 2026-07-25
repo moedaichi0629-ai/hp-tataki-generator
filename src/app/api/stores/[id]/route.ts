@@ -3,7 +3,9 @@ import { getSupabaseServerClient } from "@/lib/supabaseServerClient";
 import { rowToStore, storeUpdateToRow } from "@/lib/storeMapper";
 import { storeUpdateSchema, formatZodError } from "@/lib/validation";
 import { handleApiError } from "@/lib/apiHandler";
-import type { StoreRow } from "@/types/supabaseSchema";
+import { extractStoragePathFromPublicUrl } from "@/lib/imageStorage";
+import { STORE_IMAGES_BUCKET } from "@/lib/imageValidation";
+import type { StoreImageRow, StoreRow } from "@/types/supabaseSchema";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -65,6 +67,24 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     supabase = getSupabaseServerClient();
   } catch (error) {
     return handleApiError(error);
+  }
+
+  // ユーザーアップロード画像はDB行の削除だけではStorage上の実ファイルが残ってしまうため、先に削除しておく
+  const { data: uploadedImages } = await supabase
+    .from("store_images")
+    .select("storage_url")
+    .eq("store_id", id)
+    .eq("source_type", "user_upload");
+
+  const paths = ((uploadedImages ?? []) as Pick<StoreImageRow, "storage_url">[])
+    .map((img) => (img.storage_url ? extractStoragePathFromPublicUrl(img.storage_url) : null))
+    .filter((p): p is string => Boolean(p));
+
+  if (paths.length > 0) {
+    const { error: removeError } = await supabase.storage.from(STORE_IMAGES_BUCKET).remove(paths);
+    if (removeError) {
+      console.error("storage cleanup on store delete failed:", removeError);
+    }
   }
 
   const { error } = await supabase.from("stores").delete().eq("id", id);
