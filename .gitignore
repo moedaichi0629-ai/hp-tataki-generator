@@ -34,9 +34,6 @@ yarn-error.log*
 .env*
 !.env.local.example
 
-# Google Sheets APIサービスアカウントのJSONキー
-google-sheets-credentials*.json
-
 # vercel
 .vercel
 

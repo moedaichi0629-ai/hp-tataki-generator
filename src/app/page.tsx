@@ -1,655 +1,163 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import styles from "./page.module.css";
-import { splitToListItems } from "@/lib/textUtils";
-import { buildStandaloneHtml } from "@/lib/exportHtml";
-import {
-  addGenerationHistory,
-  addSearchHistory,
-  clearGenerationHistory,
-  clearSearchHistory,
-  getGenerationHistory,
-  getSearchHistory,
-  removeGenerationHistoryEntry,
-  removeSearchHistoryEntry,
-  type GenerationHistoryEntry,
-  type SearchHistoryEntry,
-} from "@/lib/history";
-import type { GeneratedSite, ShopSummary } from "@/types";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import common from "@/styles/common.module.css";
+import StoreStatusBadge from "@/components/StoreStatusBadge";
+import { OFFICIAL_WEBSITE_STATUS_LABELS } from "@/lib/storeStatus";
+import type { Store } from "@/types/store";
 
-type GenerationState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "done"; site: GeneratedSite }
-  | { status: "error"; message: string };
+interface DashboardData {
+  totalStores: number;
+  newStoresThisMonth: number;
+  noWebsiteCount: number;
+  unconfirmedWebsiteCount: number;
+  infoCheckingCount: number;
+  salesTargetCount: number;
+  notTargetCount: number;
+  promptNotCreatedCount: number;
+  recentCreatedStores: Store[];
+  recentUpdatedStores: Store[];
+}
 
-type PitchState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "done"; pitch: string }
-  | { status: "error"; message: string };
+type LoadState = { status: "loading" } | { status: "error"; message: string } | { status: "done"; data: DashboardData };
 
-type SheetSaveState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "done" }
-  | { status: "error"; message: string };
+function StoreMiniList({ stores, emptyLabel }: { stores: Store[]; emptyLabel: string }) {
+  if (stores.length === 0) {
+    return <p className={common.emptyState}>{emptyLabel}</p>;
+  }
+  return (
+    <ul style={{ display: "flex", flexDirection: "column", gap: 8, listStyle: "none" }}>
+      {stores.map((store) => (
+        <li key={store.id}>
+          <Link
+            href={`/stores/${store.id}`}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 12px",
+              border: "1px solid var(--border-color)",
+              borderRadius: 8,
+            }}
+          >
+            <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+              <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{store.name}</span>
+              <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                {OFFICIAL_WEBSITE_STATUS_LABELS[store.officialWebsiteStatus]}
+              </span>
+            </span>
+            <StoreStatusBadge status={store.storeStatus} />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
-const REGION_SUGGESTIONS = [
-  "広島県",
-  "福岡県",
-  "大阪府",
-  "愛知県",
-  "北海道",
-  "広島市",
-  "福岡市",
-  "大阪市",
-  "名古屋市",
-  "札幌市",
-  "仙台市",
-  "渋谷駅周辺",
-  "新宿駅周辺",
-  "梅田駅周辺",
-  "博多駅周辺",
-  "栄駅周辺",
-];
-
-const RADIUS_OPTIONS = [
-  { label: "指定しない（エリア全体を検索）", value: 0 },
-  { label: "500m", value: 500 },
-  { label: "1km", value: 1000 },
-  { label: "2km", value: 2000 },
-  { label: "3km", value: 3000 },
-];
-const DEFAULT_RADIUS = 0;
-
-const INDUSTRY_SUGGESTIONS = [
-  "美容室",
-  "ネイルサロン",
-  "エステ",
-  "整体院",
-  "整骨院",
-  "リラクゼーション",
-  "学習塾",
-  "工務店",
-  "税理士事務所",
-  "ペットサロン",
-];
-
-export default function Home() {
-  const [region, setRegion] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [radiusMeters, setRadiusMeters] = useState(DEFAULT_RADIUS);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [shops, setShops] = useState<ShopSummary[]>([]);
-  const [generations, setGenerations] = useState<Record<string, GenerationState>>({});
-  const [pitches, setPitches] = useState<Record<string, PitchState>>({});
-  const [sheetSaves, setSheetSaves] = useState<Record<string, SheetSaveState>>({});
-  const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
-  const [generationHistory, setGenerationHistory] = useState<GenerationHistoryEntry[]>([]);
-  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+export default function DashboardPage() {
+  const [state, setState] = useState<LoadState>({ status: "loading" });
 
   useEffect(() => {
-    setSearchHistory(getSearchHistory());
-    setGenerationHistory(getGenerationHistory());
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/dashboard");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "ダッシュボード情報の取得に失敗しました。");
+        if (!cancelled) setState({ status: "done", data });
+      } catch (error) {
+        if (!cancelled) {
+          setState({
+            status: "error",
+            message: error instanceof Error ? error.message : "ダッシュボード情報の取得に失敗しました。",
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const runSearch = async (searchRegion: string, searchIndustry: string, searchRadiusMeters: number) => {
-    setSearching(true);
-    setSearchError(null);
-    setShops([]);
-    setGenerations({});
-    setPitches({});
-    setSheetSaves({});
-
-    try {
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ region: searchRegion, industry: searchIndustry, radiusMeters: searchRadiusMeters }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error ?? "検索に失敗しました。");
-      }
-
-      const foundShops = data.shops as ShopSummary[];
-      setShops(foundShops);
-      setSearchHistory(
-        addSearchHistory({ region: searchRegion, industry: searchIndustry, resultCount: foundShops.length })
-      );
-    } catch (error) {
-      setSearchError(error instanceof Error ? error.message : "検索に失敗しました。");
-    } finally {
-      setSearching(false);
-      setHasSearched(true);
-    }
-  };
-
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    runSearch(region, industry, radiusMeters);
-  };
-
-  const handleHistorySearch = (entry: SearchHistoryEntry) => {
-    setRegion(entry.region);
-    setIndustry(entry.industry);
-    runSearch(entry.region, entry.industry, radiusMeters);
-  };
-
-  const handleDeleteSearchHistory = (id: string) => {
-    setSearchHistory(removeSearchHistoryEntry(id));
-  };
-
-  const handleClearSearchHistory = () => {
-    setSearchHistory(clearSearchHistory());
-  };
-
-  const handleDeleteGenerationHistory = (id: string) => {
-    setGenerationHistory(removeGenerationHistoryEntry(id));
-  };
-
-  const handleClearGenerationHistory = () => {
-    setGenerationHistory(clearGenerationHistory());
-  };
-
-  const handleGenerate = async (shop: ShopSummary) => {
-    setGenerations((prev) => ({ ...prev, [shop.placeId]: { status: "loading" } }));
-
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error ?? "生成に失敗しました。");
-      }
-
-      setGenerations((prev) => ({
-        ...prev,
-        [shop.placeId]: { status: "done", site: data.site as GeneratedSite },
-      }));
-      setGenerationHistory(
-        addGenerationHistory({
-          placeId: shop.placeId,
-          shopName: shop.name,
-          region,
-          industry,
-          type: "site",
-          site: data.site as GeneratedSite,
-        })
-      );
-    } catch (error) {
-      setGenerations((prev) => ({
-        ...prev,
-        [shop.placeId]: {
-          status: "error",
-          message: error instanceof Error ? error.message : "生成に失敗しました。",
-        },
-      }));
-    }
-  };
-
-  const handleGeneratePitch = async (shop: ShopSummary) => {
-    setPitches((prev) => ({ ...prev, [shop.placeId]: { status: "loading" } }));
-
-    try {
-      const res = await fetch("/api/sales-pitch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error ?? "営業文の生成に失敗しました。");
-      }
-
-      setPitches((prev) => ({
-        ...prev,
-        [shop.placeId]: { status: "done", pitch: data.pitch as string },
-      }));
-      setGenerationHistory(
-        addGenerationHistory({
-          placeId: shop.placeId,
-          shopName: shop.name,
-          region,
-          industry,
-          type: "pitch",
-          pitch: data.pitch as string,
-        })
-      );
-    } catch (error) {
-      setPitches((prev) => ({
-        ...prev,
-        [shop.placeId]: {
-          status: "error",
-          message: error instanceof Error ? error.message : "営業文の生成に失敗しました。",
-        },
-      }));
-    }
-  };
-
-  const handleSaveToSheet = async (shop: ShopSummary) => {
-    setSheetSaves((prev) => ({ ...prev, [shop.placeId]: { status: "loading" } }));
-
-    try {
-      const res = await fetch("/api/save-to-sheet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopName: shop.name, mapUrl: shop.mapUrl, region, industry }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error ?? "スプレッドシートへの保存に失敗しました。");
-      }
-
-      setSheetSaves((prev) => ({ ...prev, [shop.placeId]: { status: "done" } }));
-    } catch (error) {
-      setSheetSaves((prev) => ({
-        ...prev,
-        [shop.placeId]: {
-          status: "error",
-          message: error instanceof Error ? error.message : "スプレッドシートへの保存に失敗しました。",
-        },
-      }));
-    }
-  };
-
-  const handleDownloadHtml = (shop: ShopSummary, site: GeneratedSite) => {
-    const html = buildStandaloneHtml(shop, site);
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${shop.name}-hp.html`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <h1>HPたたき台ジェネレーター</h1>
-        <p className={styles.lead}>
-          地域と業種を指定して、Googleマップ上で公式ホームページが未設定の可能性がある店舗を検索します。
-          地域・業種はどちらか一方だけの入力でも検索できます。店舗ごとにボタンを押すと、AIが1ページホームページ風のプレビューを生成します。
-        </p>
+    <div>
+      <div className={common.pageHeader}>
+        <h1 className={common.pageTitle}>ダッシュボード</h1>
+      </div>
 
-        <form className={styles.searchForm} onSubmit={handleSearch}>
-          <label className={styles.field}>
-            <span>地域（任意）</span>
-            <input
-              list="region-suggestions"
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              placeholder="例: 広島県 / 広島市 / 渋谷駅周辺"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>業種（任意）</span>
-            <input
-              list="industry-suggestions"
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-              placeholder="例: 美容室"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>検索範囲（任意）</span>
-            <select
-              value={radiusMeters}
-              onChange={(e) => setRadiusMeters(Number(e.target.value))}
-            >
-              {RADIUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" disabled={searching}>
-            {searching ? "検索中..." : "検索する"}
-          </button>
-        </form>
-        <p className={styles.fieldHint}>
-          地域・業種は最低どちらか一方の入力が必要です。業種を空欄にすると、その地域の業種を問わずすべての店舗を検索します。
-          地域を空欄にすると、その業種を全国から検索します。
-          「渋谷駅周辺」のように駅名や住所を入力し、検索範囲で500m〜3kmを選ぶと、その地点を中心に絞り込んで検索します。
-          検索範囲を「指定しない」のままにするか、「広島県」「広島市」のような広い地域名を入力した場合は、これまで通りエリア全体を検索します。
-        </p>
+      <div className={common.toolbar} style={{ marginBottom: 24 }}>
+        <Link href="/search" className={common.buttonPrimary}>
+          店舗を検索する
+        </Link>
+        <Link href="/search?tab=map_url" className={common.button}>
+          GoogleマップURLから登録する
+        </Link>
+        <Link href="/stores" className={common.button}>
+          店舗一覧を見る
+        </Link>
+        <span
+          className={common.button}
+          style={{ opacity: 0.6, cursor: "not-allowed", pointerEvents: "none" }}
+          title="第3段階で実装予定です"
+        >
+          HP作成プロンプト生成（準備中）
+        </span>
+      </div>
 
-        <datalist id="region-suggestions">
-          {REGION_SUGGESTIONS.map((item) => (
-            <option key={item} value={item} />
-          ))}
-        </datalist>
-        <datalist id="industry-suggestions">
-          {INDUSTRY_SUGGESTIONS.map((item) => (
-            <option key={item} value={item} />
-          ))}
-        </datalist>
+      {state.status === "loading" && <p className={common.loading}>読み込み中...</p>}
+      {state.status === "error" && <p className={common.errorText}>{state.message}</p>}
 
-        {searchError && <p className={styles.error}>{searchError}</p>}
-
-        {!searching && hasSearched && !searchError && (
-          <p className={styles.resultCount}>
-            Googleマップ上で公式ホームページが未設定の可能性がある店舗が {shops.length} 件見つかりました。
-          </p>
-        )}
-
-        <ul className={styles.shopList}>
-          {shops.map((shop) => {
-            const generation = generations[shop.placeId] ?? { status: "idle" };
-            const pitch = pitches[shop.placeId] ?? { status: "idle" };
-            const sheetSave = sheetSaves[shop.placeId] ?? { status: "idle" };
-
-            return (
-              <li key={shop.placeId} className={styles.shopCard}>
-                <h2>{shop.name}</h2>
-                <dl className={styles.shopMeta}>
-                  <dt>住所</dt>
-                  <dd>{shop.address || "不明"}</dd>
-
-                  <dt>電話番号</dt>
-                  <dd>{shop.phoneNumber ?? "不明"}</dd>
-
-                  <dt>営業時間</dt>
-                  <dd>
-                    {shop.openingHours ? (
-                      <ul className={styles.hoursList}>
-                        {shop.openingHours.map((line) => (
-                          <li key={line}>{line}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      "不明"
-                    )}
-                  </dd>
-
-                  <dt>評価</dt>
-                  <dd>{shop.rating ?? "不明"}</dd>
-
-                  <dt>Googleマップ</dt>
-                  <dd>
-                    {shop.mapUrl ? (
-                      <>
-                        <a href={shop.mapUrl} target="_blank" rel="noopener noreferrer">
-                          地図で見る
-                        </a>
-                        <p className={styles.mapUrlText}>{shop.mapUrl}</p>
-                      </>
-                    ) : (
-                      "不明"
-                    )}
-                  </dd>
-
-                  {shop.website && (
-                    <>
-                      <dt>参考リンク</dt>
-                      <dd>
-                        <a href={shop.website} target="_blank" rel="noopener noreferrer">
-                          予約サイト・SNS等
-                        </a>
-                        <p className={styles.mapUrlText}>{shop.website}</p>
-                      </dd>
-                    </>
-                  )}
-                </dl>
-
-                <div className={styles.actionRow}>
-                  <button
-                    type="button"
-                    className={styles.generateButton}
-                    onClick={() => handleGenerate(shop)}
-                    disabled={generation.status === "loading"}
-                  >
-                    {generation.status === "loading" ? "生成中..." : "HPたたき台を作成"}
-                  </button>
-
-                  <button
-                    type="button"
-                    className={styles.sheetButton}
-                    onClick={() => handleSaveToSheet(shop)}
-                    disabled={sheetSave.status === "loading"}
-                  >
-                    {sheetSave.status === "loading" ? "保存中..." : "スプレッドシートに保存"}
-                  </button>
-                </div>
-
-                {sheetSave.status === "error" && <p className={styles.error}>{sheetSave.message}</p>}
-                {sheetSave.status === "done" && (
-                  <p className={styles.sheetSavedNote}>スプレッドシートに保存しました。</p>
-                )}
-
-                {generation.status === "error" && (
-                  <p className={styles.error}>{generation.message}</p>
-                )}
-
-                {generation.status === "done" && (
-                  <>
-                    <div className={styles.sitePreview}>
-                      <p className={styles.previewLabel}>HPプレビュー</p>
-
-                      <section className={styles.heroSection}>
-                        <h3 className={styles.heroCatch}>{generation.site.catchCopy}</h3>
-                      </section>
-
-                      <section className={styles.previewSection}>
-                        <h4>店舗紹介</h4>
-                        <p>{generation.site.introduction}</p>
-                      </section>
-
-                      <section className={styles.previewSection}>
-                        <h4>選ばれる理由</h4>
-                        <ul className={styles.previewList}>
-                          {splitToListItems(generation.site.reasons).map((line) => (
-                            <li key={line}>{line}</li>
-                          ))}
-                        </ul>
-                      </section>
-
-                      <section className={styles.previewSection}>
-                        <h4>サービス内容</h4>
-                        <ul className={styles.previewList}>
-                          {splitToListItems(generation.site.services).map((line) => (
-                            <li key={line}>{line}</li>
-                          ))}
-                        </ul>
-                      </section>
-
-                      <section className={styles.previewSection}>
-                        <h4>営業時間</h4>
-                        <p>{generation.site.businessHours}</p>
-                        {shop.openingHours && (
-                          <ul className={styles.hoursList}>
-                            {shop.openingHours.map((line) => (
-                              <li key={line}>{line}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </section>
-
-                      <section className={styles.previewSection}>
-                        <h4>アクセス</h4>
-                        <p>{generation.site.access}</p>
-                        <p className={styles.previewAddress}>{shop.address}</p>
-                        {shop.mapUrl && (
-                          <>
-                            <a href={shop.mapUrl} target="_blank" rel="noopener noreferrer">
-                              Googleマップで見る
-                            </a>
-                            <p className={styles.mapUrlText}>{shop.mapUrl}</p>
-                          </>
-                        )}
-                      </section>
-
-                      <section className={`${styles.previewSection} ${styles.contactSection}`}>
-                        <h4>お問い合わせ</h4>
-                        <p>{generation.site.contactCta}</p>
-                        {shop.phoneNumber && (
-                          <a className={styles.telButton} href={`tel:${shop.phoneNumber}`}>
-                            {shop.phoneNumber} に電話する
-                          </a>
-                        )}
-                      </section>
-                    </div>
-
-                    <div className={styles.actionRow}>
-                      <button
-                        type="button"
-                        className={styles.pitchButton}
-                        onClick={() => handleGeneratePitch(shop)}
-                        disabled={pitch.status === "loading"}
-                      >
-                        {pitch.status === "loading" ? "作成中..." : "営業文を作成"}
-                      </button>
-
-                      <button
-                        type="button"
-                        className={styles.pitchButton}
-                        onClick={() => handleDownloadHtml(shop, generation.site)}
-                      >
-                        HTMLでダウンロード
-                      </button>
-                    </div>
-
-                    {pitch.status === "error" && <p className={styles.error}>{pitch.message}</p>}
-
-                    {pitch.status === "done" && (
-                      <article className={styles.pitchBox}>
-                        <p className={styles.previewLabel}>営業提案文（下書き）</p>
-                        <p className={styles.preLine}>{pitch.pitch}</p>
-                      </article>
-                    )}
-                  </>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        <section className={styles.historySection}>
-          <div className={styles.historyHeader}>
-            <h2>検索履歴</h2>
-            {searchHistory.length > 0 && (
-              <button type="button" className={styles.clearAllButton} onClick={handleClearSearchHistory}>
-                すべて削除
-              </button>
-            )}
+      {state.status === "done" && (
+        <>
+          <div className={common.statGrid}>
+            <div className={common.statCard}>
+              <span className={common.statValue}>{state.data.totalStores}</span>
+              <span className={common.statLabel}>登録店舗数</span>
+            </div>
+            <div className={common.statCard}>
+              <span className={common.statValue}>{state.data.newStoresThisMonth}</span>
+              <span className={common.statLabel}>今月の新規登録</span>
+            </div>
+            <div className={common.statCard}>
+              <span className={common.statValue}>{state.data.noWebsiteCount}</span>
+              <span className={common.statLabel}>公式サイトなし候補数</span>
+            </div>
+            <div className={common.statCard}>
+              <span className={common.statValue}>{state.data.unconfirmedWebsiteCount}</span>
+              <span className={common.statLabel}>公式サイト未確認数</span>
+            </div>
+            <div className={common.statCard}>
+              <span className={common.statValue}>{state.data.infoCheckingCount}</span>
+              <span className={common.statLabel}>情報確認中の店舗数</span>
+            </div>
+            <div className={common.statCard}>
+              <span className={common.statValue}>{state.data.salesTargetCount}</span>
+              <span className={common.statLabel}>営業対象店舗数</span>
+            </div>
+            <div className={common.statCard}>
+              <span className={common.statValue}>{state.data.notTargetCount}</span>
+              <span className={common.statLabel}>対象外店舗数</span>
+            </div>
+            <div className={common.statCard}>
+              <span className={common.statValue}>{state.data.promptNotCreatedCount}</span>
+              <span className={common.statLabel}>プロンプト未作成店舗数</span>
+            </div>
           </div>
-          {searchHistory.length === 0 ? (
-            <p className={styles.historyEmpty}>まだ検索履歴がありません。</p>
-          ) : (
-            <ul className={styles.historyList}>
-              {searchHistory.map((entry) => (
-                <li key={entry.id} className={styles.historyRow}>
-                  <button
-                    type="button"
-                    className={styles.historyItemButton}
-                    onClick={() => handleHistorySearch(entry)}
-                    disabled={searching}
-                  >
-                    <span className={styles.historyMain}>
-                      {entry.region} × {entry.industry}
-                    </span>
-                    <span className={styles.historyMeta}>{entry.resultCount}件</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.deleteButton}
-                    onClick={() => handleDeleteSearchHistory(entry.id)}
-                    aria-label="この検索履歴を削除"
-                  >
-                    削除
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
 
-        <section className={styles.historySection}>
-          <div className={styles.historyHeader}>
-            <h2>生成履歴</h2>
-            {generationHistory.length > 0 && (
-              <button type="button" className={styles.clearAllButton} onClick={handleClearGenerationHistory}>
-                すべて削除
-              </button>
-            )}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+            <div className={common.card}>
+              <h2 className={common.sectionTitle}>最近登録した店舗</h2>
+              <StoreMiniList stores={state.data.recentCreatedStores} emptyLabel="まだ店舗が登録されていません。" />
+            </div>
+            <div className={common.card}>
+              <h2 className={common.sectionTitle}>最近更新した店舗</h2>
+              <StoreMiniList stores={state.data.recentUpdatedStores} emptyLabel="まだ更新履歴がありません。" />
+            </div>
           </div>
-          {generationHistory.length === 0 ? (
-            <p className={styles.historyEmpty}>まだ生成履歴がありません。</p>
-          ) : (
-            <ul className={styles.historyList}>
-              {generationHistory.map((entry) => {
-                const isExpanded = expandedHistoryId === entry.id;
-
-                return (
-                  <li key={entry.id}>
-                    <div className={styles.historyRow}>
-                      <button
-                        type="button"
-                        className={styles.historyItemButton}
-                        onClick={() => setExpandedHistoryId(isExpanded ? null : entry.id)}
-                      >
-                        <span className={styles.historyMain}>
-                          {entry.shopName}（{entry.type === "site" ? "HPたたき台" : "営業文"}）
-                        </span>
-                        <span className={styles.historyMeta}>
-                          {entry.region} × {entry.industry}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.deleteButton}
-                        onClick={() => handleDeleteGenerationHistory(entry.id)}
-                        aria-label="この生成履歴を削除"
-                      >
-                        削除
-                      </button>
-                    </div>
-
-                    {isExpanded && entry.type === "site" && (
-                      <div className={styles.historyDetail}>
-                        <p className={styles.heroCatch}>{entry.site.catchCopy}</p>
-                        <p>{entry.site.introduction}</p>
-                        <ul className={styles.previewList}>
-                          {splitToListItems(entry.site.reasons).map((line) => (
-                            <li key={line}>{line}</li>
-                          ))}
-                        </ul>
-                        <ul className={styles.previewList}>
-                          {splitToListItems(entry.site.services).map((line) => (
-                            <li key={line}>{line}</li>
-                          ))}
-                        </ul>
-                        <p>{entry.site.businessHours}</p>
-                        <p>{entry.site.access}</p>
-                        <p>{entry.site.contactCta}</p>
-                      </div>
-                    )}
-
-                    {isExpanded && entry.type === "pitch" && (
-                      <div className={styles.historyDetail}>
-                        <p className={styles.preLine}>{entry.pitch}</p>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-      </main>
+        </>
+      )}
     </div>
   );
 }

@@ -1,0 +1,41 @@
+.resultCard {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resultMeta {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  row-gap: 4px;
+  column-gap: 10px;
+  font-size: 13px;
+}
+
+.resultMeta dt {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.resultList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+  margin-top: 16px;
+}
+
+.registeredNote {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.checkboxRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}

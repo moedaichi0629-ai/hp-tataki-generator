@@ -1,12 +1,30 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #ffffff;
+  --surface-muted: #f7f8fa;
+  --border-color: #e2e2e2;
+  --text-secondary: #666666;
+  --accent: #2d6cdf;
+  --accent-contrast: #ffffff;
+  --danger: #c0392b;
+  --success: #1a9e5c;
+  --warning: #b98900;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --surface: #111111;
+    --surface-muted: #1a1a1a;
+    --border-color: #2a2a2a;
+    --text-secondary: #9a9a9a;
+    --accent: #5b8def;
+    --accent-contrast: #0a0a0a;
+    --danger: #e0645a;
+    --success: #3fc98a;
+    --warning: #e0b64f;
   }
 }
 
@@ -40,6 +58,14 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: inherit;
 }
 
 @media (prefers-color-scheme: dark) {

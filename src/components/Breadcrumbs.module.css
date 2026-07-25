@@ -1,0 +1,27 @@
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item a {
+  color: var(--accent);
+}
+
+.item a:hover {
+  text-decoration: underline;
+}
+
+.separator {
+  color: var(--text-secondary);
+}
