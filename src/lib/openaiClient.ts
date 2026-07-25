@@ -95,3 +95,34 @@ export async function generateStrengthsDraft(store: Store, reviews: StoreReview[
 
   return JSON.parse(content) as StrengthsAiDraft;
 }
+
+const PROMPT_POLISH_SYSTEM_PROMPT = `あなたは、渡されたMarkdown文書の「文章の言い回し」だけを整えるアシスタントです。
+
+厳守事項:
+- 見出し（#, ##, ###）、箇条書き、番号付きリスト、テーブルなどのMarkdown構造は変更しないこと。
+- 記載されている事実（店舗名・住所・電話番号・営業時間・料金・画像ID・URLなど）を一切追加・削除・変更しないこと。
+- 新しい項目や新しい見出しを追加しないこと。
+- 「要確認」「未登録」「不明」などの表記はそのまま残すこと（勝手に補完しない）。
+- 変更してよいのは、日本語としての読みやすさ・言い回しの自然さのみ。
+- 出力は整形後のMarkdown全文のみ。前後に説明文を付けないこと。`;
+
+// ルールベースで生成済みのMarkdownプロンプトの「言い回し」だけを整える（事実の変更は禁止）
+export async function polishPromptText(markdown: string): Promise<string> {
+  const client = getClient();
+
+  const completion = await client.chat.completions.create({
+    model: getModel(),
+    messages: [
+      { role: "system", content: PROMPT_POLISH_SYSTEM_PROMPT },
+      { role: "user", content: markdown },
+    ],
+    temperature: 0.2,
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error("OpenAIからの応答が空でした。");
+  }
+
+  return content.trim();
+}

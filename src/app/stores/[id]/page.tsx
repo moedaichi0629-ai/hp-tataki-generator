@@ -13,15 +13,19 @@ import ServicesTab from "./ServicesTab";
 import ReviewsStrengthsTab from "./ReviewsStrengthsTab";
 import ManagementNotesTab from "./ManagementNotesTab";
 import ImagesTab from "./images/ImagesTab";
+import RequirementsTab from "./requirements/RequirementsTab";
+import PromptsTab from "./prompts/PromptsTab";
 import type { Store, StoreStatus } from "@/types/store";
 
-type TabKey = "basic" | "services" | "reviews" | "images" | "management";
+type TabKey = "basic" | "services" | "reviews" | "images" | "requirements" | "prompts" | "management";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "basic", label: "基本情報" },
   { key: "services", label: "サービス・メニュー" },
   { key: "reviews", label: "口コミ・強み" },
   { key: "images", label: "画像管理" },
+  { key: "requirements", label: "HP制作条件" },
+  { key: "prompts", label: "プロンプト" },
   { key: "management", label: "メモ・管理情報" },
 ];
 
@@ -144,6 +148,8 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
       {tab === "services" && <ServicesTab storeId={store.id} />}
       {tab === "reviews" && <ReviewsStrengthsTab storeId={store.id} />}
       {tab === "images" && <ImagesTab storeId={store.id} />}
+      {tab === "requirements" && <RequirementsTab storeId={store.id} />}
+      {tab === "prompts" && <PromptsTab storeId={store.id} />}
       {tab === "management" && <ManagementNotesTab store={store} onStoreChanged={setStore} />}
 
       <ConfirmDialog

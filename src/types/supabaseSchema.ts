@@ -263,3 +263,110 @@ export type SocialImageReferenceInsertRow = Partial<
 export type SocialImageReferenceUpdateRow = Partial<
   Omit<SocialImageReferenceRow, "id" | "store_id" | "created_at" | "updated_at">
 >;
+
+// ---------------------------------------------------------------------------
+// 第3段階: HP制作条件・HP作成用プロンプト生成
+// ---------------------------------------------------------------------------
+
+export interface WebsiteRequirementsRow {
+  id: string;
+  store_id: string;
+  purposes: string[];
+  website_type: string | null;
+  target_audience: string | null;
+  main_message: string | null;
+  key_strengths_note: string | null;
+  primary_action: string | null;
+  contact_method: string | null;
+  reservation_method: string | null;
+  excluded_information: string | null;
+  notes: string | null;
+  supplementary_instructions: string | null;
+  technology: string | null;
+  technology_other: string | null;
+  deployment_method: string | null;
+  deployment_method_other: string | null;
+  supported_devices: string[];
+  seo_enabled: boolean;
+  accessibility_enabled: boolean;
+  map_enabled: boolean;
+  sns_enabled: boolean;
+  form_enabled: boolean;
+  animation_enabled: boolean;
+  update_friendliness: string | null;
+  external_integrations: string | null;
+  delivery_format: string | null;
+  delivery_format_other: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type WebsiteRequirementsUpsertRow = Partial<Omit<WebsiteRequirementsRow, "id" | "created_at" | "updated_at">> & {
+  store_id: string;
+};
+
+export interface WebsiteSectionRow {
+  id: string;
+  website_requirement_id: string;
+  section_type: string;
+  enabled: boolean;
+  display_order: number;
+  heading: string | null;
+  content: string | null;
+  image_ids: string[];
+  cta: string | null;
+  instructions: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type WebsiteSectionInsertRow = Partial<Omit<WebsiteSectionRow, "id" | "created_at" | "updated_at">> & {
+  website_requirement_id: string;
+  section_type: string;
+};
+
+export type WebsiteSectionUpdateRow = Partial<
+  Omit<WebsiteSectionRow, "id" | "website_requirement_id" | "section_type" | "created_at" | "updated_at">
+>;
+
+export interface PromptTemplateRow {
+  id: string;
+  ai_tool: string;
+  prompt_type: string;
+  version: number;
+  template_body: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeneratedPromptRow {
+  id: string;
+  store_id: string;
+  website_requirement_id: string | null;
+  title: string;
+  prompt_type: string;
+  ai_tool: string;
+  custom_ai_tool: string | null;
+  content: string;
+  store_updated_at_snapshot: string | null;
+  images_updated_at_snapshot: string | null;
+  template_version: number | null;
+  generation_method: string;
+  is_used: boolean;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type GeneratedPromptInsertRow = Partial<Omit<GeneratedPromptRow, "id" | "created_at" | "updated_at">> & {
+  store_id: string;
+  title: string;
+  prompt_type: string;
+  ai_tool: string;
+  content: string;
+};
+
+export type GeneratedPromptUpdateRow = Partial<
+  Omit<GeneratedPromptRow, "id" | "store_id" | "created_at" | "updated_at">
+>;

@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/", label: "ダッシュボード" },
   { href: "/search", label: "店舗検索" },
   { href: "/stores", label: "店舗一覧" },
+  { href: "/prompts", label: "プロンプト履歴" },
   { href: "/settings", label: "設定" },
 ];
 
