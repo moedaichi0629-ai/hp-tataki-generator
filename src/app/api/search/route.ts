@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { geocodeRegion, getPlaceDetails, searchPlaceIds, searchPlaceIdsNearby } from "@/lib/googlePlaces";
-import { isOfficialWebsite } from "@/lib/officialWebsite";
 import { describeFetchError } from "@/lib/errorUtils";
 import { checkRateLimit, getClientKey } from "@/lib/rateLimit";
 import { searchByRegionIndustrySchema } from "@/lib/validation";
@@ -79,7 +78,7 @@ export async function POST(request: Request) {
     let shops = details.filter((shop): shop is PlaceSearchResult => shop !== null);
 
     if (noWebsiteOnly) {
-      shops = shops.filter((shop) => !isOfficialWebsite(shop.website));
+      shops = shops.filter((shop) => !shop.website);
     }
     if (typeof minRating === "number") {
       shops = shops.filter((shop) => (shop.rating ?? 0) >= minRating);
