@@ -44,6 +44,7 @@ function SearchPageInner() {
       });
     }
     setTab(history.searchType);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
