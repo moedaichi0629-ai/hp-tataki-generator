@@ -8,6 +8,7 @@ import RegionIndustryTab from "./RegionIndustryTab";
 import MapUrlTab from "./MapUrlTab";
 import NameAddressTab from "./NameAddressTab";
 import SearchHistoryPanel from "./SearchHistoryPanel";
+import type { SearchHistory } from "@/types/store";
 
 type TabKey = "region_industry" | "map_url" | "name_address";
 
@@ -17,10 +18,33 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "name_address", label: "③ 店名・住所から個別検索" },
 ];
 
+type Selection =
+  | { tab: "region_industry"; key: string; region: string; industry: string }
+  | { tab: "map_url"; key: string; url: string }
+  | { tab: "name_address"; key: string; name: string; address: string };
+
 function SearchPageInner() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as TabKey | null) ?? "region_industry";
   const [tab, setTab] = useState<TabKey>(TABS.some((t) => t.key === initialTab) ? initialTab : "region_industry");
+  const [selection, setSelection] = useState<Selection | null>(null);
+
+  const handleHistorySelect = (history: SearchHistory) => {
+    const key = `${history.id}-${Date.now()}`;
+    if (history.searchType === "region_industry") {
+      setSelection({ tab: "region_industry", key, region: history.region ?? "", industry: history.industry ?? "" });
+    } else if (history.searchType === "map_url") {
+      setSelection({ tab: "map_url", key, url: String(history.params.url ?? "") });
+    } else {
+      setSelection({
+        tab: "name_address",
+        key,
+        name: String(history.params.name ?? ""),
+        address: String(history.params.address ?? ""),
+      });
+    }
+    setTab(history.searchType);
+  };
 
   return (
     <div>
@@ -46,11 +70,26 @@ function SearchPageInner() {
         ))}
       </div>
 
-      {tab === "region_industry" && <RegionIndustryTab />}
-      {tab === "map_url" && <MapUrlTab />}
-      {tab === "name_address" && <NameAddressTab />}
+      {tab === "region_industry" && (
+        <RegionIndustryTab
+          key={selection?.tab === "region_industry" ? selection.key : "static-region_industry"}
+          initial={selection?.tab === "region_industry" ? { region: selection.region, industry: selection.industry } : undefined}
+        />
+      )}
+      {tab === "map_url" && (
+        <MapUrlTab
+          key={selection?.tab === "map_url" ? selection.key : "static-map_url"}
+          initialUrl={selection?.tab === "map_url" ? selection.url : undefined}
+        />
+      )}
+      {tab === "name_address" && (
+        <NameAddressTab
+          key={selection?.tab === "name_address" ? selection.key : "static-name_address"}
+          initial={selection?.tab === "name_address" ? { name: selection.name, address: selection.address } : undefined}
+        />
+      )}
 
-      <SearchHistoryPanel />
+      <SearchHistoryPanel onSelect={handleHistorySelect} />
     </div>
   );
 }

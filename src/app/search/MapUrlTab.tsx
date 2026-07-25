@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import common from "@/styles/common.module.css";
 import styles from "./search.module.css";
 import PlaceResultCard from "./PlaceResultCard";
@@ -12,13 +12,12 @@ type SearchState =
   | { status: "error"; message: string }
   | { status: "done"; candidates: PlaceSearchResult[] };
 
-export default function MapUrlTab() {
-  const [url, setUrl] = useState("");
+export default function MapUrlTab({ initialUrl }: { initialUrl?: string }) {
+  const [url, setUrl] = useState(initialUrl ?? "");
   const [state, setState] = useState<SearchState>({ status: "idle" });
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) {
+  const runSearch = async (searchUrl: string) => {
+    if (!searchUrl.trim()) {
       setState({ status: "error", message: "GoogleマップのURLを入力してください。" });
       return;
     }
@@ -28,7 +27,7 @@ export default function MapUrlTab() {
       const res = await fetch("/api/search/resolve-map-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: searchUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "URLの解決に失敗しました。");
@@ -37,6 +36,19 @@ export default function MapUrlTab() {
       setState({ status: "error", message: error instanceof Error ? error.message : "URLの解決に失敗しました。" });
     }
   };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    runSearch(url);
+  };
+
+  useEffect(() => {
+    if (initialUrl) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- re-run a search selected from history on mount
+      runSearch(initialUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import common from "@/styles/common.module.css";
 import styles from "./search.module.css";
 import PlaceResultCard from "./PlaceResultCard";
@@ -12,14 +12,18 @@ type SearchState =
   | { status: "error"; message: string }
   | { status: "done"; candidates: PlaceSearchResult[] };
 
-export default function NameAddressTab() {
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
+export interface NameAddressInitial {
+  name: string;
+  address: string;
+}
+
+export default function NameAddressTab({ initial }: { initial?: NameAddressInitial }) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [address, setAddress] = useState(initial?.address ?? "");
   const [state, setState] = useState<SearchState>({ status: "idle" });
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
+  const runSearch = async (searchName: string, searchAddress: string) => {
+    if (!searchName.trim()) {
       setState({ status: "error", message: "店名を入力してください。" });
       return;
     }
@@ -29,7 +33,7 @@ export default function NameAddressTab() {
       const res = await fetch("/api/search/by-name", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address }),
+        body: JSON.stringify({ name: searchName, address: searchAddress }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "検索に失敗しました。");
@@ -38,6 +42,19 @@ export default function NameAddressTab() {
       setState({ status: "error", message: error instanceof Error ? error.message : "検索に失敗しました。" });
     }
   };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    runSearch(name, address);
+  };
+
+  useEffect(() => {
+    if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- re-run a search selected from history on mount
+      runSearch(initial.name, initial.address);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>

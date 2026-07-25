@@ -5,6 +5,7 @@ import { describeFetchError } from "@/lib/errorUtils";
 import { checkRateLimit, getClientKey } from "@/lib/rateLimit";
 import { searchByRegionIndustrySchema } from "@/lib/validation";
 import { getSupabaseServerClient } from "@/lib/supabaseServerClient";
+import { recordSearchHistory } from "@/lib/searchHistory";
 import type { PlaceSearchResult } from "@/types/store";
 
 const MIN_RADIUS_METERS = 100;
@@ -108,15 +109,13 @@ export async function POST(request: Request) {
     }
 
     try {
-      await getSupabaseServerClient()
-        .from("search_histories")
-        .insert({
-          search_type: "region_industry",
-          region: region || null,
-          industry: industry || null,
-          params: { radiusMeters: rawRadius, minRating, minReviews, openNowOnly, noWebsiteOnly, excludeRegistered },
-          result_count: shops.length,
-        });
+      await recordSearchHistory(getSupabaseServerClient(), {
+        searchType: "region_industry",
+        region: region || null,
+        industry: industry || null,
+        params: { radiusMeters: rawRadius, minRating, minReviews, openNowOnly, noWebsiteOnly, excludeRegistered },
+        resultCount: shops.length,
+      });
     } catch (error) {
       console.error("search_histories insert failed:", error);
     }

@@ -10,7 +10,7 @@ const SEARCH_TYPE_LABELS: Record<string, string> = {
   name_address: "店名・住所検索",
 };
 
-export default function SearchHistoryPanel() {
+export default function SearchHistoryPanel({ onSelect }: { onSelect: (history: SearchHistory) => void }) {
   const [histories, setHistories] = useState<SearchHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,6 +51,7 @@ export default function SearchHistoryPanel() {
           すべて削除
         </button>
       </div>
+      <p className={common.helpText}>クリックすると、同じ条件でもう一度検索します。</p>
       <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
         {histories.map((h) => (
           <li
@@ -66,10 +67,22 @@ export default function SearchHistoryPanel() {
               fontSize: 13,
             }}
           >
-            <span>
+            <button
+              type="button"
+              onClick={() => onSelect(h)}
+              style={{
+                all: "unset",
+                cursor: "pointer",
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
               {SEARCH_TYPE_LABELS[h.searchType] ?? h.searchType}
-              {h.region || h.industry ? `：${h.region ?? ""} ${h.industry ?? ""}` : ""}（結果 {h.resultCount} 件）
-            </span>
+              {h.region || h.industry ? `：${h.region ?? ""} ${h.industry ?? ""}` : ""}
+              {h.searchType === "map_url" ? `：${String(h.params.url ?? "")}` : ""}
+              {h.searchType === "name_address" ? `：${String(h.params.name ?? "")} ${String(h.params.address ?? "")}` : ""}
+              （結果 {h.resultCount} 件）
+            </button>
             <button type="button" className={common.linkButton} onClick={() => removeOne(h.id)}>
               削除
             </button>

@@ -5,6 +5,7 @@ import { describeFetchError } from "@/lib/errorUtils";
 import { checkRateLimit, getClientKey } from "@/lib/rateLimit";
 import { searchByMapUrlSchema } from "@/lib/validation";
 import { getSupabaseServerClient } from "@/lib/supabaseServerClient";
+import { recordSearchHistory } from "@/lib/searchHistory";
 
 export async function POST(request: Request) {
   const rateLimit = checkRateLimit(`resolve-map-url:${getClientKey(request)}`, 20, 60_000);
@@ -42,10 +43,10 @@ export async function POST(request: Request) {
     }
 
     try {
-      await getSupabaseServerClient().from("search_histories").insert({
-        search_type: "map_url",
+      await recordSearchHistory(getSupabaseServerClient(), {
+        searchType: "map_url",
         params: { url: parsed.data.url },
-        result_count: candidates.length,
+        resultCount: candidates.length,
       });
     } catch (error) {
       console.error("search_histories insert failed:", error);

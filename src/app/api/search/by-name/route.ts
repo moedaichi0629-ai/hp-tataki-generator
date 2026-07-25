@@ -4,6 +4,7 @@ import { describeFetchError } from "@/lib/errorUtils";
 import { checkRateLimit, getClientKey } from "@/lib/rateLimit";
 import { searchByNameAddressSchema } from "@/lib/validation";
 import { getSupabaseServerClient } from "@/lib/supabaseServerClient";
+import { recordSearchHistory } from "@/lib/searchHistory";
 
 export async function POST(request: Request) {
   const rateLimit = checkRateLimit(`search-by-name:${getClientKey(request)}`, 20, 60_000);
@@ -36,10 +37,10 @@ export async function POST(request: Request) {
     }
 
     try {
-      await getSupabaseServerClient().from("search_histories").insert({
-        search_type: "name_address",
+      await recordSearchHistory(getSupabaseServerClient(), {
+        searchType: "name_address",
         params: { name: parsed.data.name, address: parsed.data.address },
-        result_count: candidates.length,
+        resultCount: candidates.length,
       });
     } catch (error) {
       console.error("search_histories insert failed:", error);

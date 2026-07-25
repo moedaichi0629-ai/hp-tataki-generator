@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import common from "@/styles/common.module.css";
 import styles from "./search.module.css";
 import PlaceResultCard from "./PlaceResultCard";
@@ -20,9 +20,14 @@ type SearchState =
   | { status: "error"; message: string }
   | { status: "done"; shops: PlaceSearchResult[] };
 
-export default function RegionIndustryTab() {
-  const [region, setRegion] = useState("");
-  const [industry, setIndustry] = useState("");
+export interface RegionIndustryInitial {
+  region: string;
+  industry: string;
+}
+
+export default function RegionIndustryTab({ initial }: { initial?: RegionIndustryInitial }) {
+  const [region, setRegion] = useState(initial?.region ?? "");
+  const [industry, setIndustry] = useState(initial?.industry ?? "");
   const [radiusMeters, setRadiusMeters] = useState(0);
   const [maxResults, setMaxResults] = useState(20);
   const [minRating, setMinRating] = useState("");
@@ -32,9 +37,8 @@ export default function RegionIndustryTab() {
   const [excludeRegistered, setExcludeRegistered] = useState(false);
   const [state, setState] = useState<SearchState>({ status: "idle" });
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!region && !industry) {
+  const runSearch = async (searchRegion: string, searchIndustry: string) => {
+    if (!searchRegion && !searchIndustry) {
       setState({ status: "error", message: "地域か業種のどちらかを入力してください。" });
       return;
     }
@@ -45,8 +49,8 @@ export default function RegionIndustryTab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          region,
-          industry,
+          region: searchRegion,
+          industry: searchIndustry,
           radiusMeters,
           maxResults,
           minRating: minRating ? Number(minRating) : undefined,
@@ -63,6 +67,19 @@ export default function RegionIndustryTab() {
       setState({ status: "error", message: error instanceof Error ? error.message : "検索に失敗しました。" });
     }
   };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    runSearch(region, industry);
+  };
+
+  useEffect(() => {
+    if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- re-run a search selected from history on mount
+      runSearch(initial.region, initial.industry);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>
