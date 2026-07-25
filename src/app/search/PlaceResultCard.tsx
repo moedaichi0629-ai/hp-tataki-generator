@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import common from "@/styles/common.module.css";
 import styles from "./search.module.css";
+import { isOfficialWebsite } from "@/lib/officialWebsite";
 import type { PlaceSearchResult, Store } from "@/types/store";
 
 type RegisterState =
@@ -91,8 +92,15 @@ export default function PlaceResultCard({ place }: { place: PlaceSearchResult })
         </dd>
         {place.website && (
           <>
-            <dt>参考リンク</dt>
-            <dd style={{ wordBreak: "break-all" }}>{place.website}</dd>
+            <dt>{isOfficialWebsite(place.website) ? "公式サイト" : "参考リンク（公式サイトではありません）"}</dt>
+            <dd style={{ wordBreak: "break-all" }}>
+              {place.website}
+              {!isOfficialWebsite(place.website) && (
+                <span className={common.helpText} style={{ display: "block" }}>
+                  ※SNSや予約サイト等のリンクです。「公式サイトなし候補のみ」の絞り込みでは対象に含まれます。
+                </span>
+              )}
+            </dd>
           </>
         )}
       </dl>
