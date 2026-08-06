@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import common from "@/styles/common.module.css";
 import styles from "./search.module.css";
 import { isOfficialWebsite } from "@/lib/officialWebsite";
+import { registerPlace, type RegisterPlaceOptions, type RegisterPlaceResult } from "@/lib/registerPlace";
 import type { PlaceSearchResult, Store } from "@/types/store";
 
 type RegisterState =
@@ -14,61 +15,55 @@ type RegisterState =
   | { status: "exists"; store: Store }
   | { status: "duplicates"; candidates: Store[] };
 
-function buildCreatePayload(place: PlaceSearchResult, force: boolean) {
-  return {
-    force,
-    placeId: place.placeId,
-    name: place.name,
-    address: place.address || null,
-    lat: place.lat,
-    lng: place.lng,
-    phoneNumber: place.phoneNumber,
-    businessHours: place.openingHours,
-    googleMapsUrl: place.mapUrl,
-    officialWebsiteUrl: place.website,
-    googleRating: place.rating,
-    googleReviewCount: place.reviewCount,
-    googleCategories: place.categories,
-  };
-}
-
-export default function PlaceResultCard({ place }: { place: PlaceSearchResult }) {
+export default function PlaceResultCard({
+  place,
+  registrationOptions,
+  selected,
+  onToggleSelected,
+  onRegistered,
+}: {
+  place: PlaceSearchResult;
+  registrationOptions?: RegisterPlaceOptions;
+  selected?: boolean;
+  onToggleSelected?: (checked: boolean) => void;
+  onRegistered?: (result: RegisterPlaceResult) => void;
+}) {
   const router = useRouter();
   const [state, setState] = useState<RegisterState>({ status: "idle" });
 
   const register = async (force: boolean) => {
     setState({ status: "loading" });
-    try {
-      const res = await fetch("/api/stores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildCreatePayload(place, force)),
-      });
-      const data = await res.json();
+    const result = await registerPlace(place, { ...registrationOptions, force });
+    onRegistered?.(result);
 
-      if (res.status === 409) {
-        setState({ status: "exists", store: data.existingStore as Store });
-        return;
-      }
-      if (!res.ok) {
-        throw new Error(data.error ?? "登録に失敗しました。");
-      }
-      if (data.duplicateCandidates) {
-        setState({ status: "duplicates", candidates: data.duplicateCandidates as Store[] });
-        return;
-      }
-
-      router.push(`/stores/${data.store.id}`);
-    } catch (error) {
-      setState({
-        status: "error",
-        message: error instanceof Error ? error.message : "登録に失敗しました。",
-      });
+    if (result.status === "created") {
+      router.push(`/stores/${result.store.id}`);
+      return;
     }
+    if (result.status === "exists") {
+      setState({ status: "exists", store: result.existingStore });
+      return;
+    }
+    if (result.status === "duplicates") {
+      setState({ status: "duplicates", candidates: result.candidates });
+      return;
+    }
+    setState({ status: "error", message: result.message });
   };
 
   return (
     <li className={styles.resultCard}>
+      {onToggleSelected && (
+        <label className={common.checkboxField}>
+          <input
+            type="checkbox"
+            checked={Boolean(selected)}
+            disabled={Boolean(place.isRegistered)}
+            onChange={(e) => onToggleSelected(e.target.checked)}
+          />
+          選択する
+        </label>
+      )}
       <h3>{place.name}</h3>
       <dl className={styles.resultMeta}>
         <dt>住所</dt>

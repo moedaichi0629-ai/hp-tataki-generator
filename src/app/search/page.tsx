@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import common from "@/styles/common.module.css";
 import Breadcrumbs from "@/components/Breadcrumbs";
@@ -8,6 +8,7 @@ import RegionIndustryTab from "./RegionIndustryTab";
 import MapUrlTab from "./MapUrlTab";
 import NameAddressTab from "./NameAddressTab";
 import SearchHistoryPanel from "./SearchHistoryPanel";
+import { loadSessionState, saveSessionState } from "@/lib/sessionState";
 import type { SearchHistory } from "@/types/store";
 
 type TabKey = "region_industry" | "map_url" | "name_address";
@@ -18,6 +19,8 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "name_address", label: "③ 店名・住所から個別検索" },
 ];
 
+const ACTIVE_TAB_KEY = "hp-tataki:search:active-tab";
+
 type Selection =
   | { tab: "region_industry"; key: string; region: string; industry: string }
   | { tab: "map_url"; key: string; url: string }
@@ -25,9 +28,15 @@ type Selection =
 
 function SearchPageInner() {
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as TabKey | null) ?? "region_industry";
+  const tabFromUrl = searchParams.get("tab") as TabKey | null;
+  const initialTab =
+    tabFromUrl ?? loadSessionState<TabKey>(ACTIVE_TAB_KEY) ?? "region_industry";
   const [tab, setTab] = useState<TabKey>(TABS.some((t) => t.key === initialTab) ? initialTab : "region_industry");
   const [selection, setSelection] = useState<Selection | null>(null);
+
+  useEffect(() => {
+    saveSessionState(ACTIVE_TAB_KEY, tab);
+  }, [tab]);
 
   const handleHistorySelect = (history: SearchHistory) => {
     const key = `${history.id}-${Date.now()}`;

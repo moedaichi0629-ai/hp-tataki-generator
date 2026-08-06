@@ -40,6 +40,20 @@ const EMPTY_FILTERS: Filters = {
   minReviews: "",
 };
 
+function buildFilterParams(filters: Filters, sort: string): URLSearchParams {
+  const params = new URLSearchParams();
+  if (filters.name) params.set("name", filters.name);
+  if (filters.region) params.set("region", filters.region);
+  if (filters.industry) params.set("industry", filters.industry);
+  if (filters.storeStatus) params.set("storeStatus", filters.storeStatus);
+  if (filters.officialWebsiteStatus) params.set("officialWebsiteStatus", filters.officialWebsiteStatus);
+  if (filters.isSalesTarget) params.set("isSalesTarget", filters.isSalesTarget);
+  if (filters.minRating) params.set("minRating", filters.minRating);
+  if (filters.minReviews) params.set("minReviews", filters.minReviews);
+  params.set("sort", sort);
+  return params;
+}
+
 export default function StoresPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -54,16 +68,7 @@ export default function StoresPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (appliedFilters.name) params.set("name", appliedFilters.name);
-      if (appliedFilters.region) params.set("region", appliedFilters.region);
-      if (appliedFilters.industry) params.set("industry", appliedFilters.industry);
-      if (appliedFilters.storeStatus) params.set("storeStatus", appliedFilters.storeStatus);
-      if (appliedFilters.officialWebsiteStatus) params.set("officialWebsiteStatus", appliedFilters.officialWebsiteStatus);
-      if (appliedFilters.isSalesTarget) params.set("isSalesTarget", appliedFilters.isSalesTarget);
-      if (appliedFilters.minRating) params.set("minRating", appliedFilters.minRating);
-      if (appliedFilters.minReviews) params.set("minReviews", appliedFilters.minReviews);
-      params.set("sort", sort);
+      const params = buildFilterParams(appliedFilters, sort);
       params.set("page", String(page));
       params.set("pageSize", String(PAGE_SIZE));
 
@@ -100,8 +105,14 @@ export default function StoresPage() {
   return (
     <div>
       <Breadcrumbs items={[{ label: "ダッシュボード", href: "/" }, { label: "店舗一覧" }]} />
-      <div className={common.pageHeader}>
+      <div className={common.pageHeader} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1 className={common.pageTitle}>店舗一覧（{total}件）</h1>
+        <a
+          href={`/api/stores/export?${buildFilterParams(appliedFilters, sort).toString()}`}
+          className={common.button}
+        >
+          Excelエクスポート
+        </a>
       </div>
 
       <div className={common.card} style={{ marginBottom: 20 }}>
@@ -225,6 +236,7 @@ export default function StoresPage() {
                   <th>公式サイト確認状態</th>
                   <th>店舗ステータス</th>
                   <th>営業対象</th>
+                  <th>営業済み</th>
                   <th>登録日</th>
                   <th>更新日</th>
                   <th>操作</th>

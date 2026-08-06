@@ -84,6 +84,10 @@ export const storeUpdateSchema = z.object({
   infoVerificationStatus: fieldVerificationStatusEnum.optional(),
   memo: z.string().nullable().optional(),
   verificationState: z.record(z.string(), fieldVerificationStatusEnum).optional(),
+  createdHpUrl: urlSchema,
+  salesContacted: z.boolean().optional(),
+  registrationRegion: z.string().nullable().optional(),
+  registrationSearchRadiusMeters: z.number().int().min(0).nullable().optional(),
 });
 
 export const storeCreateSchema = storeUpdateSchema.extend({

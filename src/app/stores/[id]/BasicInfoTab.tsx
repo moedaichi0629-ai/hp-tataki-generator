@@ -1,6 +1,7 @@
 import Link from "next/link";
 import common from "@/styles/common.module.css";
 import styles from "./detail.module.css";
+import { formatSearchRadius } from "@/lib/searchRadiusOptions";
 import type { Store } from "@/types/store";
 
 function displayValue(value: string | number | null | undefined): string {
@@ -70,6 +71,16 @@ export default function BasicInfoTab({ store }: { store: Store }) {
         <dd>{store.facebookUrl ? <a href={store.facebookUrl} target="_blank" rel="noopener noreferrer">開く</a> : "未登録"}</dd>
         <dt>その他SNS</dt>
         <dd>{displayList(store.otherSnsUrls)}</dd>
+        <dt>作成したHP</dt>
+        <dd>{store.createdHpUrl ? <a href={store.createdHpUrl} target="_blank" rel="noopener noreferrer">開く</a> : "未登録"}</dd>
+      </dl>
+
+      <h3 className={common.sectionTitle}>登録時の検索条件</h3>
+      <dl className={styles.infoGrid}>
+        <dt>地域</dt>
+        <dd>{displayValue(store.registrationRegion)}</dd>
+        <dt>検索範囲</dt>
+        <dd>{displayValue(formatSearchRadius(store.registrationSearchRadiusMeters) || null)}</dd>
       </dl>
 
       <h3 className={common.sectionTitle}>Googleマップ情報</h3>

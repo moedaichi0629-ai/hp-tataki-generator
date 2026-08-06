@@ -67,6 +67,10 @@ export function rowToStore(row: StoreRow): Store {
     infoVerificationStatus: row.info_verification_status,
     memo: row.memo,
     verificationState: row.verification_state ?? {},
+    createdHpUrl: row.created_hp_url,
+    salesContacted: row.sales_contacted,
+    registrationRegion: row.registration_region,
+    registrationSearchRadiusMeters: row.registration_search_radius_meters,
   };
 }
 
@@ -105,6 +109,10 @@ export function storeInsertToRow(input: StoreInsert): StoreInsertRow {
     info_verification_status: input.infoVerificationStatus,
     memo: input.memo,
     verification_state: input.verificationState,
+    created_hp_url: input.createdHpUrl,
+    sales_contacted: input.salesContacted,
+    registration_region: input.registrationRegion,
+    registration_search_radius_meters: input.registrationSearchRadiusMeters,
   };
 }
 

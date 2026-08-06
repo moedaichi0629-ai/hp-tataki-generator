@@ -113,6 +113,17 @@ export default function StoreTableRow({
             営業対象
           </label>
         </td>
+        <td>
+          <label className={common.checkboxField}>
+            <input
+              type="checkbox"
+              checked={store.salesContacted}
+              disabled={busy}
+              onChange={(e) => patch({ salesContacted: e.target.checked })}
+            />
+            営業済み
+          </label>
+        </td>
         <td>{formatDate(store.createdAt)}</td>
         <td>{formatDate(store.updatedAt)}</td>
         <td>

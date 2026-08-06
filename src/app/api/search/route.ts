@@ -5,12 +5,16 @@ import { checkRateLimit, getClientKey } from "@/lib/rateLimit";
 import { searchByRegionIndustrySchema } from "@/lib/validation";
 import { getSupabaseServerClient } from "@/lib/supabaseServerClient";
 import { recordSearchHistory } from "@/lib/searchHistory";
+import { isOfficialWebsite } from "@/lib/officialWebsite";
 import type { PlaceSearchResult } from "@/types/store";
 
 const MIN_RADIUS_METERS = 100;
 const MAX_RADIUS_METERS = 5000;
 // 業種が未指定の場合に使う汎用キーワード（業種を問わず店舗全般を対象にする）
 const ANY_INDUSTRY_KEYWORD = "店舗";
+
+// ページネーションでnext_page_tokenの待機を挟むため、Vercelのデフォルト実行時間上限(10秒)より長めに確保する
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   const rateLimit = checkRateLimit(`search:${getClientKey(request)}`, 20, 60_000);
@@ -68,17 +72,17 @@ export async function POST(request: Request) {
 
       placeIds =
         geocoded && geocoded.isPinpoint
-          ? await searchPlaceIdsNearby(geocoded, radiusMeters, effectiveIndustry, apiKey)
-          : await searchPlaceIds(`${effectiveIndustry} ${region}`, apiKey);
+          ? await searchPlaceIdsNearby(geocoded, radiusMeters, effectiveIndustry, apiKey, maxResults)
+          : await searchPlaceIds(`${effectiveIndustry} ${region}`, apiKey, maxResults);
     } else {
-      placeIds = await searchPlaceIds(industry, apiKey);
+      placeIds = await searchPlaceIds(industry, apiKey, maxResults);
     }
 
     const details = await Promise.all(placeIds.map((id) => getPlaceDetails(id, apiKey)));
     let shops = details.filter((shop): shop is PlaceSearchResult => shop !== null);
 
     if (noWebsiteOnly) {
-      shops = shops.filter((shop) => !shop.website);
+      shops = shops.filter((shop) => !isOfficialWebsite(shop.website));
     }
     if (typeof minRating === "number") {
       shops = shops.filter((shop) => (shop.rating ?? 0) >= minRating);

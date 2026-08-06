@@ -22,6 +22,15 @@ function fetchWithTimeout(url: string): Promise<Response> {
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timeout));
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Google Places API（Text/Nearby Search共通）の1ページあたりの最大件数と、next_page_tokenが
+// 有効になるまでのウェイト。1クエリあたり最大3ページ（60件）までしか取得できない仕様に合わせる。
+const MAX_SEARCH_PAGES = 3;
+const NEXT_PAGE_TOKEN_DELAY_MS = 2200;
+
 interface TextSearchResponse {
   results?: { place_id?: string }[];
   status: string;
@@ -78,40 +87,93 @@ function assertOkStatus(status: string, errorMessage: string | undefined, contex
   }
 }
 
+async function fetchSearchPage(url: URL, context: string): Promise<{ placeIds: string[]; nextPageToken: string | null }> {
+  const res = await fetchWithTimeout(url.toString());
+  const data = (await res.json()) as TextSearchResponse;
+
+  assertOkStatus(data.status, data.error_message, context);
+
+  return {
+    placeIds: (data.results ?? []).map((r) => r.place_id).filter((id): id is string => Boolean(id)),
+    nextPageToken: data.next_page_token ?? null,
+  };
+}
+
+// next_page_tokenを使い、同じ検索条件で最大3ページ（60件）まで取得する。
+// トークンは発行直後は無効なため、2ページ目以降はGoogle推奨の短い待機を挟む。
+async function collectPlaceIds(
+  buildUrl: (pageToken: string | null) => URL,
+  context: string,
+  maxResults: number
+): Promise<string[]> {
+  const collected: string[] = [];
+  let pageToken: string | null = null;
+
+  for (let page = 0; page < MAX_SEARCH_PAGES; page++) {
+    if (page > 0) {
+      if (!pageToken) break;
+      await delay(NEXT_PAGE_TOKEN_DELAY_MS);
+    }
+    try {
+      const result = await fetchSearchPage(buildUrl(pageToken), context);
+      collected.push(...result.placeIds);
+      pageToken = result.nextPageToken;
+    } catch (error) {
+      // 1ページ目の失敗は呼び出し元に伝える。2ページ目以降はnext_page_tokenの遅延等で
+      // 一時的に失敗することがあるため、それまでに集まった結果を返すに留める
+      if (page === 0) throw error;
+      console.error(`${context}（追加ページ取得失敗、ここまでの結果を返します）:`, error);
+      break;
+    }
+    if (collected.length >= maxResults || !pageToken) break;
+  }
+
+  return collected;
+}
+
 export async function searchPlaceIdsNearby(
   location: { lat: number; lng: number },
   radiusMeters: number,
   keyword: string,
-  apiKey: string
+  apiKey: string,
+  maxResults = 20
 ): Promise<string[]> {
-  const url = new URL(`${PLACES_API_BASE}/nearbysearch/json`);
-  url.searchParams.set("location", `${location.lat},${location.lng}`);
-  url.searchParams.set("radius", String(radiusMeters));
-  url.searchParams.set("keyword", keyword);
-  url.searchParams.set("language", "ja");
-  url.searchParams.set("key", apiKey);
-
-  const res = await fetchWithTimeout(url.toString());
-  const data = (await res.json()) as TextSearchResponse;
-
-  assertOkStatus(data.status, data.error_message, "Google Places Nearby Search に失敗しました");
-
-  return (data.results ?? []).map((r) => r.place_id).filter((id): id is string => Boolean(id));
+  return collectPlaceIds(
+    (pageToken) => {
+      const url = new URL(`${PLACES_API_BASE}/nearbysearch/json`);
+      if (pageToken) {
+        url.searchParams.set("pagetoken", pageToken);
+      } else {
+        url.searchParams.set("location", `${location.lat},${location.lng}`);
+        url.searchParams.set("radius", String(radiusMeters));
+        url.searchParams.set("keyword", keyword);
+        url.searchParams.set("language", "ja");
+      }
+      url.searchParams.set("key", apiKey);
+      return url;
+    },
+    "Google Places Nearby Search に失敗しました",
+    maxResults
+  );
 }
 
-export async function searchPlaceIds(query: string, apiKey: string): Promise<string[]> {
-  const url = new URL(`${PLACES_API_BASE}/textsearch/json`);
-  url.searchParams.set("query", query);
-  url.searchParams.set("language", "ja");
-  url.searchParams.set("region", "jp");
-  url.searchParams.set("key", apiKey);
-
-  const res = await fetchWithTimeout(url.toString());
-  const data = (await res.json()) as TextSearchResponse;
-
-  assertOkStatus(data.status, data.error_message, "Google Places Text Search に失敗しました");
-
-  return (data.results ?? []).map((r) => r.place_id).filter((id): id is string => Boolean(id));
+export async function searchPlaceIds(query: string, apiKey: string, maxResults = 20): Promise<string[]> {
+  return collectPlaceIds(
+    (pageToken) => {
+      const url = new URL(`${PLACES_API_BASE}/textsearch/json`);
+      if (pageToken) {
+        url.searchParams.set("pagetoken", pageToken);
+      } else {
+        url.searchParams.set("query", query);
+        url.searchParams.set("language", "ja");
+        url.searchParams.set("region", "jp");
+      }
+      url.searchParams.set("key", apiKey);
+      return url;
+    },
+    "Google Places Text Search に失敗しました",
+    maxResults
+  );
 }
 
 interface PlaceDetailsReview {

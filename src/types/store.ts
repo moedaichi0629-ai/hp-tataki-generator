@@ -95,6 +95,11 @@ export interface Store {
   infoVerificationStatus: FieldVerificationStatus;
   memo: string | null;
   verificationState: VerificationState;
+
+  createdHpUrl: string | null;
+  salesContacted: boolean;
+  registrationRegion: string | null;
+  registrationSearchRadiusMeters: number | null;
 }
 
 export type StoreInsert = Partial<Omit<Store, "id" | "createdAt" | "updatedAt" | "name">> & {

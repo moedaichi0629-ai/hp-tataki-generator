@@ -67,6 +67,10 @@ export interface StoreRow {
   info_verification_status: FieldVerificationStatusRow;
   memo: string | null;
   verification_state: Record<string, string>;
+  created_hp_url: string | null;
+  sales_contacted: boolean;
+  registration_region: string | null;
+  registration_search_radius_meters: number | null;
 }
 
 export type StoreInsertRow = Partial<Omit<StoreRow, "id" | "created_at" | "updated_at">> & {

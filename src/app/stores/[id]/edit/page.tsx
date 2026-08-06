@@ -30,6 +30,7 @@ interface FormState {
   xUrl: string;
   facebookUrl: string;
   otherSnsUrls: string;
+  createdHpUrl: string;
 }
 
 function toFormState(store: Store): FormState {
@@ -56,6 +57,7 @@ function toFormState(store: Store): FormState {
     xUrl: store.xUrl ?? "",
     facebookUrl: store.facebookUrl ?? "",
     otherSnsUrls: (store.otherSnsUrls ?? []).join("\n"),
+    createdHpUrl: store.createdHpUrl ?? "",
   };
 }
 
@@ -180,6 +182,7 @@ export default function StoreEditPage({ params }: { params: Promise<{ id: string
           xUrl: form.xUrl || null,
           facebookUrl: form.facebookUrl || null,
           otherSnsUrls: splitLines(form.otherSnsUrls),
+          createdHpUrl: form.createdHpUrl || null,
           verificationState,
         }),
       });
@@ -371,6 +374,10 @@ export default function StoreEditPage({ params }: { params: Promise<{ id: string
           <label className={`${common.field} ${common.fieldFullWidth}`}>
             <span>その他SNS URL（1行に1件）</span>
             <textarea value={form.otherSnsUrls} onChange={(e) => updateField("otherSnsUrls", e.target.value)} />
+          </label>
+          <label className={common.field}>
+            <span>作成したHPのURL</span>
+            <input value={form.createdHpUrl} onChange={(e) => updateField("createdHpUrl", e.target.value)} />
           </label>
         </div>
       </div>

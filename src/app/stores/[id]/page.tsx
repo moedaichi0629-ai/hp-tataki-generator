@@ -109,6 +109,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
             <span>登録日: {new Date(store.createdAt).toLocaleDateString("ja-JP")}</span>
             <span>更新日: {new Date(store.updatedAt).toLocaleDateString("ja-JP")}</span>
             <span>{store.isSalesTarget ? "営業対象" : "対象外"}</span>
+            <span>{store.salesContacted ? "営業済み" : "未営業"}</span>
           </div>
         </div>
         <div className={styles.headerActions}>
