@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServerClient";
 import { rowToStore } from "@/lib/storeMapper";
-import { rowToGeneratedPrompt } from "@/lib/promptMapper";
 import { handleApiError } from "@/lib/apiHandler";
-import type { GeneratedPromptRow, StoreRow } from "@/types/supabaseSchema";
+import type { StoreRow } from "@/types/supabaseSchema";
 
 export async function GET() {
   let supabase;
@@ -28,9 +27,6 @@ export async function GET() {
     recentUpdated,
     requirementStoreIds,
     selectedImageStoreIds,
-    promptStoreIds,
-    promptsThisMonth,
-    recentPromptsRes,
   ] = await Promise.all([
     supabase.from("stores").select("id", { count: "exact", head: true }),
     supabase.from("stores").select("id", { count: "exact", head: true }).gte("created_at", monthStart),
@@ -43,13 +39,6 @@ export async function GET() {
     supabase.from("stores").select("*").order("updated_at", { ascending: false }).limit(5),
     supabase.from("website_requirements").select("store_id"),
     supabase.from("store_images").select("store_id").eq("is_selected", true),
-    supabase.from("generated_prompts").select("store_id"),
-    supabase.from("generated_prompts").select("id", { count: "exact", head: true }).gte("created_at", monthStart),
-    supabase
-      .from("generated_prompts")
-      .select("*, stores(name)")
-      .order("created_at", { ascending: false })
-      .limit(5),
   ]);
 
   const errors = [
@@ -64,9 +53,6 @@ export async function GET() {
     recentUpdated.error,
     requirementStoreIds.error,
     selectedImageStoreIds.error,
-    promptStoreIds.error,
-    promptsThisMonth.error,
-    recentPromptsRes.error,
   ].filter(Boolean);
 
   if (errors.length > 0) {
@@ -81,14 +67,6 @@ export async function GET() {
   const storesWithSelectedImages = new Set(
     ((selectedImageStoreIds.data ?? []) as { store_id: string }[]).map((r) => r.store_id)
   );
-  const storesWithPrompts = new Set(((promptStoreIds.data ?? []) as { store_id: string }[]).map((r) => r.store_id));
-
-  const recentPrompts = ((recentPromptsRes.data ?? []) as (GeneratedPromptRow & { stores: { name: string } | null })[]).map(
-    (row) => ({
-      prompt: rowToGeneratedPrompt(row),
-      storeName: row.stores?.name ?? "(削除された店舗)",
-    })
-  );
 
   return NextResponse.json({
     totalStores,
@@ -100,11 +78,7 @@ export async function GET() {
     notTargetCount: notTarget.count ?? 0,
     requirementsMissingCount: Math.max(0, totalStores - storesWithRequirements.size),
     imagesInsufficientCount: Math.max(0, totalStores - storesWithSelectedImages.size),
-    promptsNotCreatedCount: Math.max(0, totalStores - storesWithPrompts.size),
-    promptsCreatedCount: storesWithPrompts.size,
-    promptsThisMonthCount: promptsThisMonth.count ?? 0,
     recentCreatedStores: ((recentCreated.data ?? []) as StoreRow[]).map(rowToStore),
     recentUpdatedStores: ((recentUpdated.data ?? []) as StoreRow[]).map(rowToStore),
-    recentPrompts,
   });
 }

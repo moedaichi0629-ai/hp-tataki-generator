@@ -5,14 +5,7 @@ import Link from "next/link";
 import common from "@/styles/common.module.css";
 import StoreStatusBadge from "@/components/StoreStatusBadge";
 import { OFFICIAL_WEBSITE_STATUS_LABELS } from "@/lib/storeStatus";
-import { PROMPT_AI_TOOL_LABELS, PROMPT_TYPE_LABELS } from "@/lib/promptOptions";
 import type { Store } from "@/types/store";
-import type { GeneratedPrompt } from "@/types/prompt";
-
-interface RecentPrompt {
-  prompt: GeneratedPrompt;
-  storeName: string;
-}
 
 interface DashboardData {
   totalStores: number;
@@ -24,12 +17,8 @@ interface DashboardData {
   notTargetCount: number;
   requirementsMissingCount: number;
   imagesInsufficientCount: number;
-  promptsNotCreatedCount: number;
-  promptsCreatedCount: number;
-  promptsThisMonthCount: number;
   recentCreatedStores: Store[];
   recentUpdatedStores: Store[];
-  recentPrompts: RecentPrompt[];
 }
 
 type LoadState = { status: "loading" } | { status: "error"; message: string } | { status: "done"; data: DashboardData };
@@ -61,40 +50,6 @@ function StoreMiniList({ stores, emptyLabel }: { stores: Store[]; emptyLabel: st
               </span>
             </span>
             <StoreStatusBadge status={store.storeStatus} />
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function RecentPromptsList({ prompts }: { prompts: RecentPrompt[] }) {
-  if (prompts.length === 0) {
-    return <p className={common.emptyState}>まだプロンプトが生成されていません。</p>;
-  }
-  return (
-    <ul style={{ display: "flex", flexDirection: "column", gap: 8, listStyle: "none" }}>
-      {prompts.map(({ prompt, storeName }) => (
-        <li key={prompt.id}>
-          <Link
-            href={`/stores/${prompt.storeId}/prompts/${prompt.id}`}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 12px",
-              border: "1px solid var(--border-color)",
-              borderRadius: 8,
-            }}
-          >
-            <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-              <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{storeName}</span>
-              <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                {PROMPT_TYPE_LABELS[prompt.promptType]} /{" "}
-                {prompt.aiTool === "other" ? prompt.customAiTool : PROMPT_AI_TOOL_LABELS[prompt.aiTool]}
-              </span>
-            </span>
           </Link>
         </li>
       ))}
@@ -146,12 +101,6 @@ export default function DashboardPage() {
         <Link href="/stores" className={common.button}>
           HP制作条件を入力する
         </Link>
-        <Link href="/stores" className={common.button}>
-          プロンプトを作成する
-        </Link>
-        <Link href="/prompts" className={common.button}>
-          プロンプト履歴を見る
-        </Link>
       </div>
 
       {state.status === "loading" && <p className={common.loading}>読み込み中...</p>}
@@ -196,18 +145,6 @@ export default function DashboardPage() {
               <span className={common.statValue}>{state.data.imagesInsufficientCount}</span>
               <span className={common.statLabel}>画像準備不足店舗数</span>
             </div>
-            <div className={common.statCard}>
-              <span className={common.statValue}>{state.data.promptsNotCreatedCount}</span>
-              <span className={common.statLabel}>プロンプト未作成数</span>
-            </div>
-            <div className={common.statCard}>
-              <span className={common.statValue}>{state.data.promptsCreatedCount}</span>
-              <span className={common.statLabel}>プロンプト作成済み数</span>
-            </div>
-            <div className={common.statCard}>
-              <span className={common.statValue}>{state.data.promptsThisMonthCount}</span>
-              <span className={common.statLabel}>今月のプロンプト作成数</span>
-            </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
@@ -218,10 +155,6 @@ export default function DashboardPage() {
             <div className={common.card}>
               <h2 className={common.sectionTitle}>最近更新した店舗</h2>
               <StoreMiniList stores={state.data.recentUpdatedStores} emptyLabel="まだ更新履歴がありません。" />
-            </div>
-            <div className={common.card}>
-              <h2 className={common.sectionTitle}>最近作成したプロンプト</h2>
-              <RecentPromptsList prompts={state.data.recentPrompts} />
             </div>
           </div>
         </>

@@ -1,8 +1,4 @@
 import type {
-  GeneratedPromptInsertRow,
-  GeneratedPromptRow,
-  GeneratedPromptUpdateRow,
-  PromptTemplateRow,
   WebsiteRequirementsRow,
   WebsiteRequirementsUpsertRow,
   WebsiteSectionInsertRow,
@@ -12,13 +8,7 @@ import type {
 import type {
   DeliveryFormat,
   DeploymentMethod,
-  GeneratedPrompt,
-  GeneratedPromptUpdate,
   PrimaryAction,
-  PromptAiTool,
-  PromptGenerationMethod,
-  PromptTemplate,
-  PromptType,
   SectionType,
   SupportedDevice,
   TechnologyChoice,
@@ -147,75 +137,3 @@ export function websiteSectionUpdateToRow(input: WebsiteSectionUpdate): WebsiteS
   };
 }
 
-export function rowToPromptTemplate(row: PromptTemplateRow): PromptTemplate {
-  return {
-    id: row.id,
-    aiTool: row.ai_tool as PromptAiTool,
-    promptType: row.prompt_type as PromptType,
-    version: row.version,
-    templateBody: row.template_body,
-    isActive: row.is_active,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
-export function rowToGeneratedPrompt(row: GeneratedPromptRow): GeneratedPrompt {
-  return {
-    id: row.id,
-    storeId: row.store_id,
-    websiteRequirementId: row.website_requirement_id,
-    title: row.title,
-    promptType: row.prompt_type as PromptType,
-    aiTool: row.ai_tool as PromptAiTool,
-    customAiTool: row.custom_ai_tool,
-    content: row.content,
-    storeUpdatedAtSnapshot: row.store_updated_at_snapshot,
-    imagesUpdatedAtSnapshot: row.images_updated_at_snapshot,
-    templateVersion: row.template_version,
-    generationMethod: row.generation_method as PromptGenerationMethod,
-    isUsed: row.is_used,
-    memo: row.memo,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
-export function generatedPromptInsertToRow(input: {
-  storeId: string;
-  websiteRequirementId: string | null;
-  title: string;
-  promptType: PromptType;
-  aiTool: PromptAiTool;
-  customAiTool: string | null;
-  content: string;
-  storeUpdatedAtSnapshot: string | null;
-  imagesUpdatedAtSnapshot: string | null;
-  templateVersion: number | null;
-  generationMethod: PromptGenerationMethod;
-}): GeneratedPromptInsertRow {
-  return {
-    store_id: input.storeId,
-    website_requirement_id: input.websiteRequirementId,
-    title: input.title,
-    prompt_type: input.promptType,
-    ai_tool: input.aiTool,
-    custom_ai_tool: input.customAiTool,
-    content: input.content,
-    store_updated_at_snapshot: input.storeUpdatedAtSnapshot,
-    images_updated_at_snapshot: input.imagesUpdatedAtSnapshot,
-    template_version: input.templateVersion,
-    generation_method: input.generationMethod,
-  };
-}
-
-export function generatedPromptUpdateToRow(input: GeneratedPromptUpdate): GeneratedPromptUpdateRow {
-  return {
-    title: input.title,
-    ai_tool: input.aiTool,
-    custom_ai_tool: input.customAiTool,
-    content: input.content,
-    is_used: input.isUsed,
-    memo: input.memo,
-  };
-}

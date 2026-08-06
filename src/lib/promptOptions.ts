@@ -2,8 +2,6 @@ import type {
   DeliveryFormat,
   DeploymentMethod,
   PrimaryAction,
-  PromptAiTool,
-  PromptType,
   SectionType,
   SupportedDevice,
   TechnologyChoice,
@@ -139,31 +137,3 @@ export const RECOMMENDED_SECTION_TYPES: SectionType[] = [
   "access",
   "contact",
 ];
-
-export const PROMPT_AI_TOOL_OPTIONS: { value: PromptAiTool; label: string }[] = [
-  { value: "raddyai", label: "RaddyAI" },
-  { value: "claude_code", label: "Claude Code" },
-  { value: "cursor", label: "Cursor" },
-  { value: "lovable", label: "Lovable" },
-  { value: "bolt", label: "Bolt" },
-  { value: "replit", label: "Replit" },
-  { value: "chatgpt", label: "ChatGPT" },
-  { value: "gemini", label: "Gemini" },
-  { value: "other", label: "その他" },
-];
-export const PROMPT_AI_TOOL_LABELS = toLabelMap(PROMPT_AI_TOOL_OPTIONS);
-
-export const PROMPT_TYPE_OPTIONS: { value: PromptType; label: string }[] = [
-  { value: "hp_initial_creation", label: "HP初回作成" },
-  { value: "hp_revision", label: "既存HP修正" },
-  { value: "store_info_update", label: "店舗情報修正" },
-  { value: "image_replacement", label: "画像差し替え" },
-  { value: "section_add", label: "セクション追加" },
-  { value: "section_remove", label: "セクション削除" },
-  { value: "layout_fix", label: "表示崩れ修正" },
-  { value: "mobile_fix", label: "スマホ対応修正" },
-  { value: "seo_improvement", label: "SEO改善" },
-  { value: "deploy", label: "公開・デプロイ" },
-  { value: "other", label: "その他" },
-];
-export const PROMPT_TYPE_LABELS = toLabelMap(PROMPT_TYPE_OPTIONS);
