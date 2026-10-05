@@ -2,7 +2,7 @@
 
 Googleマップから店舗情報を集め、HP制作の提案先を一覧で管理し、営業状況や制作したHPのURLを記録するWebアプリです。
 
-[作品一覧](https://github.com/moedaichi0629-ai/landing-page) · [ポートフォリオ](https://moedaichi0629-ai.github.io/landing-page/)
+[作品一覧](https://github.com/moedaichi0629-ai/landing-page) · [ポートフォリオ](https://moedaichi0629-ai.github.io/)
 
 ## 解決する課題
 
